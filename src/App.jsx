@@ -3,6 +3,9 @@ import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, Wall
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import OrderModal from './OrderModal';
+import Dashboard from './Dashboard';
+import Waybill from './Waybill';
+import TrackingPage from './TrackingPage';
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
@@ -29,7 +32,7 @@ const INITIAL_ORDERS = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState('data-entry');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCompany, setSelectedCompany] = useState('الكل');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState(today());
@@ -47,6 +50,8 @@ function App() {
   const [activeAgentModal, setActiveAgentModal] = useState({ isOpen: false, data: null });
   const [activeExpenseModal, setActiveExpenseModal] = useState({ isOpen: false, data: null });
   const [activeEmployeeModal, setActiveEmployeeModal] = useState({ isOpen: false, data: null });
+  const [waybillOrder, setWaybillOrder] = useState(null);
+  const [showTracking, setShowTracking] = useState(false);
 
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
@@ -342,6 +347,10 @@ function App() {
     return { total: todayOrders.length, delivered: todayDelivered, pending: todayPending, collected: todayTotal };
   }, [orders]);
 
+  if (showTracking) {
+    return <TrackingPage onBack={() => setShowTracking(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/30 flex font-sans" dir="rtl">
 
@@ -357,6 +366,7 @@ function App() {
           </div>
         </div>
         <nav className="flex-1 p-3 flex flex-col gap-1">
+          <NavButton id="dashboard" icon={TrendingUp} label="لوحة التحكم" />
           <NavButton id="data-entry" icon={FileSpreadsheet} label="الطلبات والإدخال" />
           <NavButton id="company-summary" icon={BarChart3} label="تقفيل الشركات" />
           <div className="my-2 border-t border-white/5"></div>
@@ -365,6 +375,10 @@ function App() {
           <div className="my-2 border-t border-white/5"></div>
           <NavButton id="salaries" icon={WalletCards} label="المرتبات" />
           <NavButton id="expenses" icon={Receipt} label="الخزينة" />
+          <div className="my-2 border-t border-white/5"></div>
+          <button onClick={() => setShowTracking(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5">
+            <Eye className="w-5 h-5" /> <span className="font-medium">تتبع الشحنات</span>
+          </button>
         </nav>
         <div className="p-4 border-t border-white/5 shrink-0 flex flex-col gap-3">
           {!isInstalled && installPrompt && (
@@ -377,7 +391,7 @@ function App() {
               <CheckCircle className="w-3 h-3" /> تم تثبيت التطبيق
             </div>
           )}
-          <p className="text-center text-[10px] text-white/20">البيانات محفوظة محلياً ✓</p>
+          <p className="text-center text-[10px] text-white/20">البيانات محفوظة على السيرفر ☁️</p>
         </div>
       </aside>
 
@@ -388,6 +402,7 @@ function App() {
         <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+              {activeTab === 'dashboard' && 'لوحة التحكم'}
               {activeTab === 'data-entry' && 'الطلبات والإدخال'}
               {activeTab === 'company-summary' && 'تقفيل الشركات'}
               {activeTab === 'merchants' && 'التجار والشركات'}
@@ -407,7 +422,13 @@ function App() {
               </div>
             )}
 
-            {activeTab === 'data-entry' && (
+            
+        {/* ============ DASHBOARD ============ */}
+        {activeTab === 'dashboard' && (
+          <Dashboard orders={orders} merchants={merchants} agents={agents} expenses={expenses} companyProfits={companyProfits} />
+        )}
+
+        {activeTab === 'data-entry' && (
               <button onClick={openAddModal} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
                 <Plus className="w-4 h-4" /> إضافة طلب
               </button>
@@ -568,6 +589,9 @@ function App() {
                           <td className="px-3 py-3 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
                           <td className="px-3 py-3 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
+                                <Printer className="w-3.5 h-3.5" />
+                              </button>
                               <button onClick={() => openEditModal(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل">
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
@@ -860,6 +884,9 @@ function App() {
         merchants={merchants}
         agents={agents}
       />
+
+      {/* Waybill Print Modal */}
+      {waybillOrder && <Waybill order={waybillOrder} onClose={() => setWaybillOrder(null)} />}
 
       <datalist id="agents-list">{agents.map(a => <option key={a.id} value={a.name} />)}</datalist>
 
