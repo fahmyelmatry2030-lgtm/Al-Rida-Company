@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, WalletCards, Printer, Download, Trash2, Search, Store, UserCircle, Receipt, CheckCircle, Lock, Calendar } from 'lucide-react';
+import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, WalletCards, Printer, Download, Trash2, Search, Store, UserCircle, Receipt, CheckCircle, Lock, Calendar, MonitorSmartphone } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -30,6 +30,24 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState(today());
   const [showSettled, setShowSettled] = useState(false); // show old settled orders
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // PWA Install Prompt
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => { setIsInstalled(true); setInstallPrompt(null); });
+    if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') setInstallPrompt(null);
+  };
   
   // Core Data States
   const [orders, setOrders] = useState(() => {
@@ -232,7 +250,19 @@ function App() {
           <NavButton id="salaries" icon={WalletCards} label="مرتبات الموظفين" />
           <NavButton id="expenses" icon={Receipt} label="الخزينة والمصروفات" />
         </nav>
-        <div className="p-4 border-t border-indigo-800 text-center text-xs text-indigo-400 shrink-0">تم الحفظ محلياً ✓</div>
+        <div className="p-4 border-t border-indigo-800 shrink-0 flex flex-col gap-3">
+          {!isInstalled && installPrompt && (
+            <button onClick={handleInstall} className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-emerald-900/30 text-sm w-full">
+              <MonitorSmartphone className="w-5 h-5" /> تثبيت التطبيق
+            </button>
+          )}
+          {isInstalled && (
+            <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm font-medium">
+              <CheckCircle className="w-4 h-4" /> تم تثبيت التطبيق
+            </div>
+          )}
+          <p className="text-center text-xs text-indigo-400">تم الحفظ محلياً ✓</p>
+        </div>
       </aside>
 
       {/* Main Content */}
