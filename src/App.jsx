@@ -20,8 +20,8 @@ const STATUS_OPTIONS = [
 const today = () => new Date().toISOString().split('T')[0];
 
 const INITIAL_ORDERS = [
-  { id: '1', date: today(), sender: 'الشيخ الثلاثاء', code: 'A001', customerName: 'نعمة عبد الحليم', center: 'العجمي', phone: '01224516481', count: 2, total: 770, agent: 'حمو الثلاثاء', status: 'تم التسليم', collected: 770, commission: 50, returns: '', notes: '', settled: false },
-  { id: '2', date: today(), sender: 'الشيخ الثلاثاء', code: 'A002', customerName: 'شيرين', center: 'الاسكندرية', phone: '01008740774', count: 2, total: 700, agent: 'بوده الاربعاء', status: 'مؤجل', collected: 0, commission: 50, returns: '', notes: '', settled: false },
+  { id: '1', date: today(), sender: 'البدرشين الاثنين', code: '1', customerName: 'سارة فايق', center: 'شارع زكي بدوي', phone: '1270655688', count: 2, total: 1537, agent: 'ابو ذكري الثلاثاء', status: 'نزول', collected: 1537, commission: 20, returns: '', notes: '', company: 'مليكة جينز', settled: false },
+  { id: '2', date: today(), sender: 'البدرشين الاثنين', code: '2', customerName: 'اسراء احمد', center: 'ليدين شعبان ميا', phone: '1222278011', count: 2, total: 1537, agent: 'سكر الاثنين', status: 'تم التسليم', collected: 1537, commission: 20, returns: '', notes: '', company: 'مليكة جينز', settled: false },
 ];
 
 function App() {
@@ -104,7 +104,7 @@ function App() {
 
   const addRow = () => {
     setOrders([{
-      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', settled: false
+      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false
     }, ...orders]);
   };
 
@@ -128,7 +128,7 @@ function App() {
   };
 
   // Search & Filter
-  const companiesDropdown = ['الكل', ...new Set([...merchants.map(m => m.name), ...orders.map(o => o.sender)].filter(Boolean))];
+  const companiesDropdown = ['الكل', ...new Set([...merchants.map(m => m.name), ...orders.map(o => o.company)].filter(Boolean))];
 
   // Available dates for filter
   const availableDates = useMemo(() => [...new Set(orders.map(o => o.date).filter(Boolean))].sort().reverse(), [orders]);
@@ -138,7 +138,7 @@ function App() {
     
     // In company-summary, filter by company
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
-      result = result.filter(o => o.sender === selectedCompany);
+      result = result.filter(o => o.company === selectedCompany);
     }
     
     // In company-summary, filter by date range
@@ -210,10 +210,10 @@ function App() {
   // Export
   const exportOrdersToExcel = () => {
     const dataToExport = filteredOrders.map((order, i) => ({
-      'م': i + 1, 'التاريخ': order.date, 'الراسل': order.sender, 'الكود': order.code, 'اسم العميل': order.customerName, 'المركز': order.center,
-      'الرقم': order.phone, 'العدد': order.count, 'الإجمالي': order.total, 'المندوب': order.agent, 'الموقف': order.status,
+      'م': i + 1, 'التاريخ': order.date, 'الراسل': order.sender, 'الكود': order.code, 'الاسم': order.customerName, 'المنطقه': order.center,
+      'الرقم': order.phone, 'العدد': order.count, 'السعر': order.total, 'المندوب': order.agent, 'الموقف': order.status,
       'المحصل': order.collected, 'العمولة': order.commission, 'الصافي': calculateNet(order.collected, order.commission),
-      'المرتجعات': order.returns, 'ملاحظات': order.notes, 'الحالة': order.settled ? 'تم التقفيل' : 'مفتوح',
+      'المرتجعات': order.returns, 'ملاحظات': order.notes, 'الشركات': order.company, 'الحالة': order.settled ? 'تم التقفيل' : 'مفتوح',
     }));
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
@@ -394,13 +394,13 @@ function App() {
                   <tr>
                     <th className="px-2 py-3 border border-slate-200 w-10 text-center">م</th>
                     <th className="px-2 py-3 border border-slate-200 w-28">التاريخ</th>
-                    <th className="px-2 py-3 border border-slate-200">الراسل (التاجر)</th>
+                    <th className="px-2 py-3 border border-slate-200">الراسل</th>
                     <th className="px-2 py-3 border border-slate-200 w-24">الكود</th>
-                    <th className="px-2 py-3 border border-slate-200 min-w-[130px]">اسم العميل</th>
-                    <th className="px-2 py-3 border border-slate-200 min-w-[90px]">المركز</th>
+                    <th className="px-2 py-3 border border-slate-200 min-w-[130px]">الاسم</th>
+                    <th className="px-2 py-3 border border-slate-200 min-w-[90px]">المنطقه</th>
                     <th className="px-2 py-3 border border-slate-200 w-28">الرقم</th>
                     <th className="px-2 py-3 border border-slate-200 w-14 text-center">العدد</th>
-                    <th className="px-2 py-3 border border-slate-200 w-20 text-center">الإجمالي</th>
+                    <th className="px-2 py-3 border border-slate-200 w-20 text-center">السعر</th>
                     <th className="px-2 py-3 border border-slate-200 min-w-[110px]">المندوب</th>
                     <th className="px-2 py-3 border border-slate-200 min-w-[120px]">الموقف</th>
                     <th className="px-2 py-3 border border-slate-200 w-20 text-center">المحصل</th>
@@ -408,10 +408,11 @@ function App() {
                     <th className="px-2 py-3 border border-slate-200 w-20 text-center bg-indigo-50">الصافي</th>
                     <th className="px-2 py-3 border border-slate-200 w-20 text-center">المرتجعات</th>
                     <th className="px-2 py-3 border border-slate-200 min-w-[120px]">ملاحظات</th>
+                    <th className="px-2 py-3 border border-slate-200 min-w-[120px]">الشركات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredOrders.length === 0 ? <tr><td colSpan="16" className="text-center py-12 text-slate-500">لا يوجد بيانات للعرض.</td></tr> : 
+                  {filteredOrders.length === 0 ? <tr><td colSpan="17" className="text-center py-12 text-slate-500">لا يوجد بيانات للعرض.</td></tr> : 
                    filteredOrders.map((order, index) => {
                     const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
                     const isSettled = order.settled;
@@ -426,7 +427,7 @@ function App() {
                           <input type="date" value={order.date || ''} onChange={e => handleOrderChange(order.id, 'date', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-1 py-2 outline-none text-xs font-mono ${isSettled ? 'cursor-not-allowed text-slate-400' : ''} print:p-0`} />
                         </td>
                         <td className="px-1 border border-slate-100 p-0 print:border-gray-400">
-                          <input list="merchants-list" type="text" value={order.sender} onChange={e => handleOrderChange(order.id, 'sender', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-2 py-2 outline-none ${isSettled ? 'cursor-not-allowed' : 'focus:bg-white'} print:p-0`} />
+                          <input type="text" value={order.sender} onChange={e => handleOrderChange(order.id, 'sender', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-2 py-2 outline-none ${isSettled ? 'cursor-not-allowed' : 'focus:bg-white'} print:p-0`} />
                         </td>
                         <td className="px-1 border border-slate-100 p-0 print:border-gray-400"><input type="text" value={order.code} onChange={e => handleOrderChange(order.id, 'code', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-2 py-2 outline-none ${isSettled ? 'cursor-not-allowed' : 'focus:bg-white'} print:p-0`} /></td>
                         <td className="px-1 border border-slate-100 p-0 print:border-gray-400"><input type="text" value={order.customerName} onChange={e => handleOrderChange(order.id, 'customerName', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-2 py-2 outline-none font-medium ${isSettled ? 'cursor-not-allowed' : 'focus:bg-white'} print:p-0`} /></td>
@@ -448,6 +449,9 @@ function App() {
                         <td className="px-2 py-2 border border-slate-100 text-center font-bold bg-indigo-50/40 text-indigo-700 print:bg-transparent print:text-black text-sm">{calculateNet(order.collected, order.commission)}</td>
                         <td className="px-1 border border-slate-100 p-0 print:border-gray-400"><input type="text" value={order.returns} onChange={e => handleOrderChange(order.id, 'returns', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-1 py-2 outline-none text-center ${isSettled ? 'cursor-not-allowed' : ''} print:p-0`} /></td>
                         <td className="px-1 border border-slate-100 p-0 print:border-gray-400"><input type="text" value={order.notes} onChange={e => handleOrderChange(order.id, 'notes', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-2 py-2 outline-none text-slate-500 text-xs ${isSettled ? 'cursor-not-allowed' : ''} print:p-0`} placeholder="ملاحظة..." /></td>
+                        <td className="px-1 border border-slate-100 p-0 print:border-gray-400">
+                          <input list="merchants-list" type="text" value={order.company || ''} onChange={e => handleOrderChange(order.id, 'company', e.target.value)} disabled={isSettled} className={`w-full bg-transparent px-2 py-2 outline-none font-bold text-indigo-700 ${isSettled ? 'cursor-not-allowed' : 'focus:bg-white'} print:p-0`} placeholder="الشركة..." />
+                        </td>
                       </tr>
                     )
                   })}
