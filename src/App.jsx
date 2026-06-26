@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, WalletCards, Printer, Download, Trash2, Search, Store, UserCircle, Receipt, CheckCircle, Lock, Calendar, MonitorSmartphone } from 'lucide-react';
+import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, WalletCards, Printer, Download, Upload, Trash2, Search, Store, UserCircle, Receipt, CheckCircle, Lock, Calendar, MonitorSmartphone } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -31,6 +31,7 @@ function App() {
   const [filterDateFrom, setFilterDateFrom] = useState(today());
   const [filterDateTo, setFilterDateTo] = useState(today());
   const [showSettled, setShowSettled] = useState(false); // show old settled orders
+  const fileInputRef = React.useRef(null);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -222,7 +223,51 @@ function App() {
     ws['!dir'] = 'rtl';
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "الطلبات");
-    saveAs(new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), activeTab === 'company-summary' ? `كشف_حساب_${selectedCompany}_${filterDate}.xlsx` : `الطلبات.xlsx`);
+    saveAs(new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), activeTab === 'company-summary' ? `كشف_حساب_${selectedCompany}_${filterDateFrom}.xlsx` : `الطلبات.xlsx`);
+  };
+
+  const importOrdersFromExcel = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        const importedOrders = data.map(row => ({
+          id: Math.random().toString(36).substr(2, 9),
+          date: today(),
+          sender: row['الراسل']?.toString() || '',
+          code: row['الكود']?.toString() || '',
+          customerName: (row['الاسم'] || row['اسم العميل'])?.toString() || '',
+          center: (row['المنطقه'] || row['المركز'])?.toString() || '',
+          phone: row['الرقم']?.toString() || '',
+          count: Number(row['العدد']) || 1,
+          total: Number(row['السعر'] || row['الإجمالي']) || 0,
+          agent: row['المندوب']?.toString() || '',
+          status: row['الموقف']?.toString() || '',
+          collected: Number(row['المحصل']) || 0,
+          commission: Number(row['العمولة']) || 20,
+          returns: row['المرتجعات']?.toString() || '',
+          notes: row['ملاحظات']?.toString() || '',
+          company: row['الشركات']?.toString() || '',
+          settled: false
+        }));
+
+        if (importedOrders.length > 0) {
+          setOrders(prev => [...importedOrders, ...prev]);
+          alert(`تم استيراد ${importedOrders.length} طلب بنجاح.`);
+        }
+      } catch (err) {
+        alert('حدث خطأ أثناء استيراد الملف. تأكد أنه ملف إكسيل صحيح.');
+      }
+      e.target.value = ''; // Reset input
+    };
+    reader.readAsBinaryString(file);
   };
 
   const NavButton = ({ id, icon: Icon, label }) => (
@@ -338,9 +383,16 @@ function App() {
             )}
 
             {(activeTab === 'company-summary' || activeTab === 'data-entry') && (
-              <button onClick={exportOrdersToExcel} className="flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-4 py-2.5 rounded-xl font-medium text-sm">
-                <Download className="w-4 h-4" /> Excel
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-medium text-sm">
+                  <Upload className="w-4 h-4" /> استيراد
+                </button>
+                <input type="file" ref={fileInputRef} onChange={importOrdersFromExcel} accept=".xlsx, .xls" className="hidden" />
+                
+                <button onClick={exportOrdersToExcel} className="flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-4 py-2.5 rounded-xl font-medium text-sm">
+                  <Download className="w-4 h-4" /> تصدير
+                </button>
+              </div>
             )}
             <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-medium text-sm">
               <Printer className="w-4 h-4" /> طباعة
