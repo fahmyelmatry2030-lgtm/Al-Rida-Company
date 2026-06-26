@@ -1,16 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
 
-// TODO: استبدل هذه القيم بالقيم الخاصة بمشروعك من Firebase Console
 const firebaseConfig = {
-  apiKey: "ضع_الكود_هنا",
-  authDomain: "ضع_الكود_هنا",
-  projectId: "ضع_الكود_هنا",
-  storageBucket: "ضع_الكود_هنا",
-  messagingSenderId: "ضع_الكود_هنا",
-  appId: "ضع_الكود_هنا"
+  apiKey: "AIzaSyCsg_Zk0TTJrFCVgZjy4I07TYG1pb8eGeg",
+  authDomain: "elrade.firebaseapp.com",
+  projectId: "elrade",
+  storageBucket: "elrade.firebasestorage.app",
+  messagingSenderId: "1954163201",
+  appId: "1:1954163201:web:495659dfd256359b486e00",
+  measurementId: "G-LE5WMY2WNH"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 export const db = getFirestore(app);
