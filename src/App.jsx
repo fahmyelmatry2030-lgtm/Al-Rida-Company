@@ -628,7 +628,15 @@ function App() {
                   </thead>
                   <tbody>
                     {filteredOrders.length === 0 ? (
-                      <tr><td colSpan="11" className="text-center py-16 text-slate-400">لا يوجد بيانات للعرض</td></tr>
+                      <tr><td colSpan="11" className="text-center py-24">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-2">
+                            <Store className="w-8 h-8 text-slate-300" />
+                          </div>
+                          <p className="text-slate-500 font-bold text-lg">لا يوجد شحنات لهذه الشركة</p>
+                          <p className="text-slate-400 text-sm">قم باستيراد ملف شيت الإكسيل أو أضف طلبات يدوياً</p>
+                        </div>
+                      </td></tr>
                     ) : filteredOrders.map((order, index) => {
                       const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
                       return (
