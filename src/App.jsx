@@ -220,7 +220,7 @@ function App() {
       <aside className="w-64 bg-indigo-900 text-white flex flex-col shadow-xl z-20 sticky top-0 h-screen print:hidden overflow-y-auto custom-scrollbar">
         <div className="p-6 flex items-center gap-3 border-b border-indigo-800 shrink-0">
           <Truck className="w-8 h-8 text-indigo-400" />
-          <div><h1 className="text-xl font-bold">نظام الشحن</h1><span className="text-indigo-300 text-xs">الإصدار الشامل</span></div>
+          <div><h1 className="text-xl font-bold">شركة الرضا</h1><span className="text-indigo-300 text-xs">نظام إدارة الشحن</span></div>
         </div>
         <nav className="flex-1 p-4 flex flex-col gap-2">
           <NavButton id="data-entry" icon={FileSpreadsheet} label="الطلبات والإدخال" />
