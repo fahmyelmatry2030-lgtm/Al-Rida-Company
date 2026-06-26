@@ -3,6 +3,7 @@ import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, Wall
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import OrderModal from './OrderModal';
+import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
 
 const STATUS_OPTIONS = [
   { label: 'تم التسليم', value: 'تم التسليم', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
@@ -40,6 +41,19 @@ function App() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [activeMerchantModal, setActiveMerchantModal] = useState({ isOpen: false, data: null });
+  const [activeAgentModal, setActiveAgentModal] = useState({ isOpen: false, data: null });
+  const [activeExpenseModal, setActiveExpenseModal] = useState({ isOpen: false, data: null });
+  const [activeEmployeeModal, setActiveEmployeeModal] = useState({ isOpen: false, data: null });
+
+  const handleSaveEntity = (setter, modalSetter, savedItem) => {
+    setter(prev => {
+      const exists = prev.find(o => o.id === savedItem.id);
+      if (exists) return prev.map(o => o.id === savedItem.id ? savedItem : o);
+      return [savedItem, ...prev];
+    });
+    modalSetter({ isOpen: false, data: null });
+  };
 
   // PWA Install Prompt
   useEffect(() => {
@@ -376,22 +390,22 @@ function App() {
               </button>
             )}
             {activeTab === 'merchants' && (
-              <button onClick={() => addArrayItem(setMerchants, { name: '', phone: '', address: '', rate: 0 })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
+              <button onClick={() => setActiveMerchantModal({ isOpen: true, data: null })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
                 <Plus className="w-4 h-4" /> إضافة تاجر
               </button>
             )}
             {activeTab === 'agents' && (
-              <button onClick={() => addArrayItem(setAgents, { name: '', phone: '', zone: '', vehicle: '' })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
+              <button onClick={() => setActiveAgentModal({ isOpen: true, data: null })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
                 <Plus className="w-4 h-4" /> إضافة مندوب
               </button>
             )}
             {activeTab === 'expenses' && (
-              <button onClick={() => addArrayItem(setExpenses, { date: today(), amount: 0, notes: '' })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
+              <button onClick={() => setActiveExpenseModal({ isOpen: true, data: null })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
                 <Plus className="w-4 h-4" /> إضافة مصروف
               </button>
             )}
             {activeTab === 'salaries' && (
-              <button onClick={() => addArrayItem(setEmployees, { name: '', baseSalary: 0, deductions: 0, advances: 0 })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
+              <button onClick={() => setActiveEmployeeModal({ isOpen: true, data: null })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
                 <Plus className="w-4 h-4" /> إضافة موظف
               </button>
             )}
@@ -667,17 +681,23 @@ function App() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1">
             <table className="w-full text-sm text-right">
               <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold border-b border-slate-200">
-                <tr><th className="px-4 py-4 border-l w-16">م</th><th className="px-4 py-4 border-l">اسم التاجر / الشركة</th><th className="px-4 py-4 border-l">رقم الهاتف</th><th className="px-4 py-4 border-l min-w-[200px]">العنوان</th><th className="px-4 py-4 border-l w-32">سعر الشحن</th></tr>
+                <tr><th className="px-4 py-4 border-l w-16">م</th><th className="px-4 py-4 border-l">اسم التاجر / الشركة</th><th className="px-4 py-4 border-l">رقم الهاتف</th><th className="px-4 py-4 border-l min-w-[200px]">العنوان</th><th className="px-4 py-4 border-l w-32">سعر الشحن</th><th className="px-4 py-4 border-l w-24 text-center">إجراءات</th></tr>
               </thead>
               <tbody>
                 {merchants.length === 0 ? <tr><td colSpan="5" className="text-center py-16 text-slate-400">لا يوجد تجار. اضغط "إضافة تاجر"</td></tr> : 
                  merchants.map((m, i) => (
-                  <tr key={m.id} className="border-b border-slate-50 relative group hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 text-center text-slate-400 relative"><button onClick={() => deleteArrayItem(setMerchants, m.id, 'مسح هذا التاجر؟')} className="absolute right-2 top-3.5 text-red-300 hover:text-red-600 hidden group-hover:block"><Trash2 className="w-4 h-4"/></button><span>{i + 1}</span></td>
-                    <td className="px-2 border-l"><input type="text" value={m.name} onChange={e => handleArrayChange(setMerchants, m.id, 'name', e.target.value)} className="w-full px-2 py-2 outline-none font-bold text-slate-800 bg-transparent focus:bg-slate-50 rounded-lg" placeholder="اسم التاجر" /></td>
-                    <td className="px-2 border-l"><input type="text" value={m.phone} onChange={e => handleArrayChange(setMerchants, m.id, 'phone', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent focus:bg-slate-50 rounded-lg" placeholder="01xxxxxxxxx" /></td>
-                    <td className="px-2 border-l"><input type="text" value={m.address} onChange={e => handleArrayChange(setMerchants, m.id, 'address', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent focus:bg-slate-50 rounded-lg" placeholder="العنوان" /></td>
-                    <td className="px-2 border-l"><input type="number" value={m.rate || ''} onChange={e => handleArrayChange(setMerchants, m.id, 'rate', e.target.value)} className="w-full px-2 py-2 outline-none text-center bg-transparent focus:bg-slate-50 rounded-lg" placeholder="0" /></td>
+                  <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 text-center text-slate-400 font-mono">{i + 1}</td>
+                    <td className="px-4 py-3 border-l font-bold text-slate-800">{m.name || '—'}</td>
+                    <td className="px-4 py-3 border-l text-slate-600" dir="ltr">{m.phone || '—'}</td>
+                    <td className="px-4 py-3 border-l text-slate-600">{m.address || '—'}</td>
+                    <td className="px-4 py-3 border-l text-center font-bold text-slate-700">{Number(m.rate || 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-center border-l">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => setActiveMerchantModal({ isOpen: true, data: m })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteArrayItem(setMerchants, m.id, 'مسح هذا التاجر؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -690,17 +710,23 @@ function App() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1">
             <table className="w-full text-sm text-right">
               <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold border-b border-slate-200">
-                <tr><th className="px-4 py-4 border-l w-16">م</th><th className="px-4 py-4 border-l">اسم المندوب</th><th className="px-4 py-4 border-l">رقم الهاتف</th><th className="px-4 py-4 border-l">خط السير / المنطقة</th><th className="px-4 py-4 border-l">المركبة</th></tr>
+                <tr><th className="px-4 py-4 border-l w-16">م</th><th className="px-4 py-4 border-l">اسم المندوب</th><th className="px-4 py-4 border-l">رقم الهاتف</th><th className="px-4 py-4 border-l">خط السير / المنطقة</th><th className="px-4 py-4 border-l">المركبة</th><th className="px-4 py-4 border-l w-24 text-center">إجراءات</th></tr>
               </thead>
               <tbody>
                 {agents.length === 0 ? <tr><td colSpan="5" className="text-center py-16 text-slate-400">لا يوجد مناديب. اضغط "إضافة مندوب"</td></tr> : 
                  agents.map((a, i) => (
-                  <tr key={a.id} className="border-b border-slate-50 relative group hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 text-center text-slate-400 relative"><button onClick={() => deleteArrayItem(setAgents, a.id, 'مسح هذا المندوب؟')} className="absolute right-2 top-3.5 text-red-300 hover:text-red-600 hidden group-hover:block"><Trash2 className="w-4 h-4"/></button><span>{i + 1}</span></td>
-                    <td className="px-2 border-l"><input type="text" value={a.name} onChange={e => handleArrayChange(setAgents, a.id, 'name', e.target.value)} className="w-full px-2 py-2 outline-none font-bold text-slate-800 bg-transparent focus:bg-slate-50 rounded-lg" placeholder="اسم المندوب" /></td>
-                    <td className="px-2 border-l"><input type="text" value={a.phone} onChange={e => handleArrayChange(setAgents, a.id, 'phone', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent focus:bg-slate-50 rounded-lg" placeholder="رقم الهاتف" /></td>
-                    <td className="px-2 border-l"><input type="text" value={a.zone} onChange={e => handleArrayChange(setAgents, a.id, 'zone', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent focus:bg-slate-50 rounded-lg" placeholder="المنطقة" /></td>
-                    <td className="px-2 border-l"><input type="text" value={a.vehicle} onChange={e => handleArrayChange(setAgents, a.id, 'vehicle', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent text-slate-500 focus:bg-slate-50 rounded-lg" placeholder="موتوسيكل / سيارة" /></td>
+                  <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 text-center text-slate-400 font-mono">{i + 1}</td>
+                    <td className="px-4 py-3 border-l font-bold text-slate-800">{a.name || '—'}</td>
+                    <td className="px-4 py-3 border-l text-slate-600" dir="ltr">{a.phone || '—'}</td>
+                    <td className="px-4 py-3 border-l text-slate-600">{a.zone || '—'}</td>
+                    <td className="px-4 py-3 border-l text-slate-500">{a.vehicle || '—'}</td>
+                    <td className="px-3 py-3 text-center border-l">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => setActiveAgentModal({ isOpen: true, data: a })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteArrayItem(setAgents, a.id, 'مسح هذا المندوب؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -739,16 +765,22 @@ function App() {
               <div className="p-4 bg-slate-50/50 border-b border-slate-200"><h3 className="font-bold text-slate-700 text-sm">سجل المصروفات</h3></div>
               <table className="w-full text-sm text-right">
                 <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold border-b border-slate-200">
-                  <tr><th className="px-4 py-3.5 border-l w-16">م</th><th className="px-4 py-3.5 border-l w-40">التاريخ</th><th className="px-4 py-3.5 border-l w-40">المبلغ (ج.م)</th><th className="px-4 py-3.5 border-l">البيان / ملاحظات</th></tr>
+                  <tr><th className="px-4 py-3.5 border-l w-16">م</th><th className="px-4 py-3.5 border-l w-40">التاريخ</th><th className="px-4 py-3.5 border-l w-40">المبلغ (ج.م)</th><th className="px-4 py-3.5 border-l">البيان / ملاحظات</th><th className="px-4 py-3.5 border-l w-24 text-center">إجراءات</th></tr>
                 </thead>
                 <tbody>
                   {expenses.length === 0 ? <tr><td colSpan="4" className="text-center py-16 text-slate-400">لا يوجد مصروفات مسجلة</td></tr> : 
                    expenses.map((exp, i) => (
-                    <tr key={exp.id} className="border-b border-slate-50 relative group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 text-center text-slate-400 relative"><button onClick={() => deleteArrayItem(setExpenses, exp.id, 'مسح هذا المصروف؟')} className="absolute right-2 top-3.5 text-red-300 hover:text-red-600 hidden group-hover:block"><Trash2 className="w-4 h-4"/></button><span>{i + 1}</span></td>
-                      <td className="px-2 border-l"><input type="date" value={exp.date} onChange={e => handleArrayChange(setExpenses, exp.id, 'date', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent font-mono text-sm focus:bg-slate-50 rounded-lg" /></td>
-                      <td className="px-2 border-l"><input type="number" value={exp.amount || ''} onChange={e => handleArrayChange(setExpenses, exp.id, 'amount', e.target.value)} className="w-full px-2 py-2 outline-none font-bold text-red-600 bg-transparent text-center focus:bg-slate-50 rounded-lg" placeholder="0" /></td>
-                      <td className="px-2 border-l"><input type="text" value={exp.notes} onChange={e => handleArrayChange(setExpenses, exp.id, 'notes', e.target.value)} className="w-full px-2 py-2 outline-none bg-transparent focus:bg-slate-50 rounded-lg" placeholder="إيجار، كهرباء، بوفيه..." /></td>
+                    <tr key={exp.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 text-center text-slate-400 font-mono">{i + 1}</td>
+                      <td className="px-4 py-3 border-l font-mono text-sm">{exp.date}</td>
+                      <td className="px-4 py-3 border-l font-bold text-red-600 text-center">{Number(exp.amount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 border-l text-slate-600">{exp.notes || '—'}</td>
+                      <td className="px-3 py-3 text-center border-l">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => setActiveExpenseModal({ isOpen: true, data: exp })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
+                          <button onClick={() => deleteArrayItem(setExpenses, exp.id, 'مسح هذا المصروف؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
