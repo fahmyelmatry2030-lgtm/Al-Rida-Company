@@ -3,6 +3,8 @@ import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, Wall
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import OrderModal from './OrderModal';
+import { db } from './firebase';
+import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
 
 const STATUS_OPTIONS = [
@@ -46,13 +48,13 @@ function App() {
   const [activeExpenseModal, setActiveExpenseModal] = useState({ isOpen: false, data: null });
   const [activeEmployeeModal, setActiveEmployeeModal] = useState({ isOpen: false, data: null });
 
-  const handleSaveEntity = (setter, modalSetter, savedItem) => {
-    setter(prev => {
-      const exists = prev.find(o => o.id === savedItem.id);
-      if (exists) return prev.map(o => o.id === savedItem.id ? savedItem : o);
-      return [savedItem, ...prev];
-    });
-    modalSetter({ isOpen: false, data: null });
+  const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
+    try {
+      await setDoc(doc(db, collectionName, savedItem.id), savedItem);
+      modalSetter({ isOpen: false, data: null });
+    } catch(err) {
+      alert('خطأ في الحفظ: ' + err.message);
+    }
   };
 
   // PWA Install Prompt
@@ -72,54 +74,65 @@ function App() {
   };
   
   // Core Data States
-  const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem('shipping_orders');
-    if (saved) {
-      return JSON.parse(saved).map(o => ({ ...o, date: o.date || today(), settled: o.settled || false }));
+  const [orders, setOrders] = useState([]);
+
+  const [employees, setEmployees] = useState([]);
+
+  const [merchants, setMerchants] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+
+
+  // --- Firebase Sync ---
+  useEffect(() => {
+    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => setOrders(snap.docs.map(d => d.data())));
+    const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())));
+    const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())));
+    const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())));
+    const unsubExpenses = onSnapshot(collection(db, 'expenses'), snap => setExpenses(snap.docs.map(d => d.data())));
+    return () => { unsubOrders(); unsubEmployees(); unsubMerchants(); unsubAgents(); unsubExpenses(); };
+  }, []);
+
+  const migrateFromLocal = async () => {
+    if(!window.confirm('هل تريد ترحيل البيانات المحلية إلى Firebase؟ هذا الإجراء سيرفع كل البيانات الموجودة على جهازك لتصبح متاحة للجميع.')) return;
+    try {
+      const localOrders = JSON.parse(localStorage.getItem('shipping_orders') || '[]');
+      const localEmp = JSON.parse(localStorage.getItem('shipping_employees') || '[]');
+      const localMer = JSON.parse(localStorage.getItem('shipping_merchants') || '[]');
+      const localAg = JSON.parse(localStorage.getItem('shipping_agents') || '[]');
+      const localExp = JSON.parse(localStorage.getItem('shipping_expenses') || '[]');
+      
+      for(const item of localOrders) await setDoc(doc(db, 'orders', item.id), item);
+      for(const item of localEmp) await setDoc(doc(db, 'employees', item.id), item);
+      for(const item of localMer) await setDoc(doc(db, 'merchants', item.id), item);
+      for(const item of localAg) await setDoc(doc(db, 'agents', item.id), item);
+      for(const item of localExp) await setDoc(doc(db, 'expenses', item.id), item);
+      
+      alert('تم الترحيل بنجاح!');
+    } catch(err) {
+      alert('خطأ في الترحيل: يرجى التأكد من إضافة بيانات Firebase بشكل صحيح في src/firebase.js\n\n' + err.message);
     }
-    return INITIAL_ORDERS;
-  });
-
-  const [employees, setEmployees] = useState(() => {
-    const saved = localStorage.getItem('shipping_employees');
-    if (saved) return JSON.parse(saved);
-    const oldSaved = localStorage.getItem('shipping_salaries');
-    if (oldSaved) {
-       return Object.entries(JSON.parse(oldSaved)).map(([name, data], i) => ({
-         id: i.toString(), name, baseSalary: data.baseSalary || 0, deductions: data.deductions || 0, advances: data.advances || 0
-       }));
-    }
-    return [];
-  });
-
-  const [merchants, setMerchants] = useState(() => JSON.parse(localStorage.getItem('shipping_merchants') || '[]'));
-  const [agents, setAgents] = useState(() => JSON.parse(localStorage.getItem('shipping_agents') || '[]'));
-  const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem('shipping_expenses') || '[]'));
-
-  // Save to LocalStorage
-  useEffect(() => localStorage.setItem('shipping_orders', JSON.stringify(orders)), [orders]);
-  useEffect(() => localStorage.setItem('shipping_employees', JSON.stringify(employees)), [employees]);
-  useEffect(() => localStorage.setItem('shipping_merchants', JSON.stringify(merchants)), [merchants]);
-  useEffect(() => localStorage.setItem('shipping_agents', JSON.stringify(agents)), [agents]);
-  useEffect(() => localStorage.setItem('shipping_expenses', JSON.stringify(expenses)), [expenses]);
+  };
 
   const calculateNet = (collected, commission) => (Number(collected) || 0) - (Number(commission) || 0);
 
   // --- Orders Logic ---
-  const handleOrderChange = (id, field, value) => {
-    setOrders(prev => prev.map(order => {
-      if (order.id === id) {
-        if (order.settled && field !== 'settled') return order;
-        let updatedOrder = { ...order, [field]: value };
-        if (field === 'status') {
-          const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
-          if (zeroCollectedStatuses.includes(value)) updatedOrder.collected = 0;
-          else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) updatedOrder.collected = updatedOrder.total;
-        }
-        return updatedOrder;
-      }
-      return order;
-    }));
+  const handleOrderChange = async (id, field, value) => {
+    const order = orders.find(o => o.id === id);
+    if (!order || (order.settled && field !== 'settled')) return;
+    
+    let updatedOrder = { ...order, [field]: value };
+    if (field === 'status') {
+      const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
+      if (zeroCollectedStatuses.includes(value)) updatedOrder.collected = 0;
+      else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) updatedOrder.collected = updatedOrder.total;
+    }
+    
+    try {
+      await setDoc(doc(db, 'orders', id), updatedOrder);
+    } catch(err) {
+      alert('خطأ في التحديث: ' + err.message);
+    }
   };
 
   const openAddModal = () => {
@@ -135,20 +148,24 @@ function App() {
     setIsModalOpen(true);
   };
 
-  const handleSaveOrder = (savedOrder) => {
-    setOrders(prev => {
-      const exists = prev.find(o => o.id === savedOrder.id);
-      if (exists) {
-        return prev.map(o => o.id === savedOrder.id ? savedOrder : o);
-      }
-      return [savedOrder, ...prev];
-    });
+  const handleSaveOrder = async (savedOrder) => {
+    try {
+      await setDoc(doc(db, 'orders', savedOrder.id), savedOrder);
+    } catch(err) {
+      alert('خطأ: ' + err.message);
+    }
   };
 
-  const deleteRow = (id) => {
+  const deleteRow = async (id) => {
     const order = orders.find(o => o.id === id);
     if (order?.settled) return alert('لا يمكن حذف طلب تم تقفيله.');
-    window.confirm('هل أنت متأكد من مسح هذا الطلب؟') && setOrders(prev => prev.filter(o => o.id !== id));
+    if (window.confirm('هل أنت متأكد من مسح هذا الطلب؟')) {
+      try {
+        await deleteDoc(doc(db, 'orders', id));
+      } catch(err) {
+        alert('خطأ: ' + err.message);
+      }
+    }
   };
 
   // --- Settlement Logic ---
@@ -217,9 +234,15 @@ function App() {
   }, [orders, expenses]);
 
   // CRUD helpers
-  const addArrayItem = (setter, emptyItem) => setter(prev => [{ id: Math.random().toString(36).substr(2, 9), ...emptyItem }, ...prev]);
-  const deleteArrayItem = (setter, id, msg) => { if(window.confirm(msg)) setter(prev => prev.filter(item => item.id !== id)); };
-  const handleArrayChange = (setter, id, field, value) => setter(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const deleteArrayItem = async (collectionName, id, msg) => {
+    if (window.confirm(msg)) {
+      try {
+        await deleteDoc(doc(db, collectionName, id));
+      } catch(err) {
+        alert('خطأ: ' + err.message);
+      }
+    }
+  };
 
   // Salaries
   const employeesList = useMemo(() => {
@@ -695,7 +718,7 @@ function App() {
                     <td className="px-3 py-3 text-center border-l">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setActiveMerchantModal({ isOpen: true, data: m })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => deleteArrayItem(setMerchants, m.id, 'مسح هذا التاجر؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteArrayItem('merchants', m.id, 'مسح هذا التاجر؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -724,7 +747,7 @@ function App() {
                     <td className="px-3 py-3 text-center border-l">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setActiveAgentModal({ isOpen: true, data: a })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => deleteArrayItem(setAgents, a.id, 'مسح هذا المندوب؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteArrayItem('agents', a.id, 'مسح هذا المندوب؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -778,7 +801,7 @@ function App() {
                       <td className="px-3 py-3 text-center border-l">
                         <div className="flex items-center justify-center gap-1">
                           <button onClick={() => setActiveExpenseModal({ isOpen: true, data: exp })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
-                          <button onClick={() => deleteArrayItem(setExpenses, exp.id, 'مسح هذا المصروف؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => deleteArrayItem('expenses', exp.id, 'مسح هذا المصروف؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
