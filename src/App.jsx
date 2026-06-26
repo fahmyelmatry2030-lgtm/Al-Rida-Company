@@ -28,7 +28,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('data-entry');
   const [selectedCompany, setSelectedCompany] = useState('الكل');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDate, setFilterDate] = useState(today());
+  const [filterDateFrom, setFilterDateFrom] = useState(today());
+  const [filterDateTo, setFilterDateTo] = useState(today());
   const [showSettled, setShowSettled] = useState(false); // show old settled orders
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -103,7 +104,7 @@ function App() {
 
   const addRow = () => {
     setOrders([{
-      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 0, returns: '', notes: '', settled: false
+      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', settled: false
     }, ...orders]);
   };
 
@@ -140,9 +141,10 @@ function App() {
       result = result.filter(o => o.sender === selectedCompany);
     }
     
-    // In company-summary, filter by date
-    if (activeTab === 'company-summary' && filterDate) {
-      result = result.filter(o => o.date === filterDate);
+    // In company-summary, filter by date range
+    if (activeTab === 'company-summary') {
+      if (filterDateFrom) result = result.filter(o => o.date >= filterDateFrom);
+      if (filterDateTo) result = result.filter(o => o.date <= filterDateTo);
     }
     
     // In company-summary, filter settled vs unsettled
@@ -165,7 +167,7 @@ function App() {
       );
     }
     return result;
-  }, [orders, activeTab, selectedCompany, searchQuery, filterDate, showSettled]);
+  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled]);
 
   const summaryStats = useMemo(() => {
     return filteredOrders.reduce((acc, order) => {
@@ -323,8 +325,10 @@ function App() {
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-slate-500" />
-                  <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 outline-none text-sm" />
+                  <span className="text-sm font-medium text-slate-500">من:</span>
+                  <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 outline-none text-sm" />
+                  <span className="text-sm font-medium text-slate-500">إلى:</span>
+                  <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 outline-none text-sm" />
                 </div>
                 <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer select-none">
                   <input type="checkbox" checked={showSettled} onChange={e => setShowSettled(e.target.checked)} className="rounded border-slate-300" />
