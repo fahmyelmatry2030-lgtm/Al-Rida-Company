@@ -334,11 +334,11 @@ function App() {
         // Helper to find value from row by checking a list of column aliases
         const findValue = (row, aliases) => {
           const rowKeys = Object.keys(row);
-          // First pass: look for exact clean matches
+          // First pass: look for exact clean matches (ignoring all spaces/special chars)
           for (const alias of aliases) {
-            const cleanAlias = alias.replace(/[\s_\-\.]/g, '').toLowerCase();
+            const cleanAlias = alias.replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
             for (const rk of rowKeys) {
-              const cleanRk = rk.trim().replace(/[\s_\-\.]/g, '').toLowerCase();
+              const cleanRk = rk.trim().replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
               if (cleanRk === cleanAlias) {
                 return row[rk];
               }
@@ -347,9 +347,9 @@ function App() {
           // Second pass: look for partial matches (excluding short ambiguous keys)
           for (const alias of aliases) {
             if (alias.length < 3) continue; 
-            const cleanAlias = alias.replace(/[\s_\-\.]/g, '').toLowerCase();
+            const cleanAlias = alias.replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
             for (const rk of rowKeys) {
-              const cleanRk = rk.trim().replace(/[\s_\-\.]/g, '').toLowerCase();
+              const cleanRk = rk.trim().replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
               if (cleanRk.includes(cleanAlias)) {
                 return row[rk];
               }
@@ -359,35 +359,38 @@ function App() {
         };
 
         const importedOrders = data.map(row => {
-          const company = findValue(row, ['الشركة', 'الشركه', 'الراسل', 'اسم الراسل', 'اسم الشركة', 'اسم الشركه', 'company', 'sender', 'merchant'])?.toString().trim() || '';
-          const code = findValue(row, ['الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'رقم الاوردر', 'رقم الطلب', 'code', 'order_id', 'id'])?.toString().trim() || '';
-          const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'العميل', 'customer', 'name', 'customer_name'])?.toString().trim() || '';
-          const center = findValue(row, ['المنطقه', 'المنطقة', 'المركز', 'العنوان', 'المحافظة', 'المحافظه', 'العنوان بالتفصيل', 'address', 'center', 'region', 'city'])?.toString().trim() || '';
-          const phone = findValue(row, ['الهاتف', 'رقم الهاتف', 'التليفون', 'رقم التليفون', 'تليفون', 'الموبايل', 'رقم الموبايل', 'phone', 'mobile', 'tel'])?.toString().trim() || '';
-          const total = Number(findValue(row, ['السعر', 'السعر شامل الشحن', 'الإجمالي', 'الاجمالي', 'القيمة', 'القيمه', 'قيمة الشحنة', 'total', 'price', 'amount'])) || 0;
-          const agent = findValue(row, ['المندوب', 'اسم المندوب', 'agent', 'delivery'])?.toString().trim() || '';
-          const status = findValue(row, ['الموقف', 'الحالة', 'الحاله', 'حالة الطلب', 'status'])?.toString().trim() || '';
-          const commission = Number(findValue(row, ['العمولة', 'العموله', 'عمولة المندوب', 'commission', 'agent_commission'])) || 20;
-          const notes = findValue(row, ['ملاحظات', 'الملاحظات', 'البيان', 'notes', 'comment'])?.toString().trim() || '';
-          const returns = findValue(row, ['المرتجعات', 'المرتجع', 'returns'])?.toString().trim() || '';
+          const company = findValue(row, ['الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
+          const sender = findValue(row, ['الراسل', 'اسم الراسل', 'sender'])?.toString().trim() || '';
+          const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id'])?.toString().trim() || '';
+          const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'customer', 'name'])?.toString().trim() || '';
+          const center = findValue(row, ['العنوان', 'المنطقه', 'المنطقة', 'المركز', 'address', 'center', 'region'])?.toString().trim() || '';
+          const phone = findValue(row, ['الرقم', 'الهاتف', 'التليفون', 'رقم الهاتف', 'phone', 'mobile'])?.toString().trim() || '';
+          const count = Number(findValue(row, ['العدد', 'count'])) || 1;
+          const total = Number(findValue(row, ['الاجمالى', 'الاجمالي', 'السعر', 'الإجمالي', 'total', 'price'])) || 0;
+          const agent = findValue(row, ['المناديب', 'المندوب', 'اسم المندوب', 'agent'])?.toString().trim() || '';
+          const status = findValue(row, ['الموقف', 'الحالة', 'الحاله', 'status'])?.toString().trim() || '';
+          const collected = Number(findValue(row, ['المحصل', 'collected'])) || 0;
+          const commission = Number(findValue(row, ['العموله', 'العمولة', 'commission'])) || 20;
+          const notes = findValue(row, ['ملاحظات', 'الملاحظات', 'البيان', 'notes'])?.toString().trim() || '';
+          const returns = findValue(row, ['المرتجع', 'المرتجهات', 'returns'])?.toString().trim() || '';
 
           return {
             id: Math.random().toString(36).substr(2, 9),
             date: today(),
-            sender: company,
+            sender: sender || company,
             code,
             customerName,
             center,
             phone,
-            count: Number(row['العدد']) || 1,
+            count,
             total,
             agent,
             status,
-            collected: status === 'تم التسليم' || status === 'جزئي' ? total : 0,
+            collected: status === 'تم التسليم' || status === 'جزئي' ? (collected || total) : collected,
             commission,
             returns,
             notes,
-            company,
+            company: company || sender,
             settled: false
           };
         });
