@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from './firebase';
-import { collection, onSnapshot, setDoc, doc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { EmployeeModal } from './EntityModals';
 import {
-  WalletCards, CheckCircle, Clock, Plus, Trash2, Edit3,
-  ChevronRight, ChevronLeft, User, TrendingUp, AlertCircle,
-  Calendar, DollarSign, Package, X
+  WalletCards, CheckCircle, Clock, Trash2, Edit3,
+  ChevronRight, ChevronLeft, User,
+  Calendar, Package, X
 } from 'lucide-react';
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -17,6 +18,7 @@ export default function SalaryPage({ employees, orders, currentUser }) {
   const [loading, setLoading] = useState({});
   const [showHistory, setShowHistory] = useState(false);
   const [allPayments, setAllPayments] = useState([]);
+  const [empModal, setEmpModal] = useState({ isOpen: false, data: null });
 
   // Load payments for current month/year
   useEffect(() => {
@@ -65,6 +67,18 @@ export default function SalaryPage({ employees, orders, currentUser }) {
 
   const isPaid = (empId) => payments.some(p => p.employeeId === empId);
   const getPayment = (empId) => payments.find(p => p.employeeId === empId);
+
+  const handleDeleteEmployee = async (emp) => {
+    if (!window.confirm(`حذف موظف "${emp.name}"؟ سيتم حذف بياناته نهائياً.`)) return;
+    try { await deleteDoc(doc(db, 'employees', emp.id)); } catch (err) { alert('خطأ: ' + err.message); }
+  };
+
+  const handleSaveEmployee = async (data) => {
+    try {
+      await setDoc(doc(db, 'employees', data.id), data);
+      setEmpModal({ isOpen: false, data: null });
+    } catch (err) { alert('خطأ: ' + err.message); }
+  };
 
   const handlePay = async (emp) => {
     if (!window.confirm(`تأكيد دفع مرتب ${emp.name} لشهر ${MONTHS_AR[month]} ${year}؟`)) return;
@@ -230,14 +244,13 @@ export default function SalaryPage({ employees, orders, currentUser }) {
                       <p className="text-xs text-slate-400">{MONTHS_AR[month]} {year}</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setEmpModal({ isOpen: true, data: emp })} className="p-2 rounded-xl text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="تعديل بيانات الموظف"><Edit3 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteEmployee(emp)} className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors" title="حذف الموظف"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                   {paid ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold">
-                        <CheckCircle className="w-3.5 h-3.5" /> تم الصرف
-                      </div>
-                      <button onClick={() => handleUnpay(emp.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                        <X className="w-4 h-4" />
-                      </button>
+                    <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold">
+                      <CheckCircle className="w-3.5 h-3.5" /> تم الصرف
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-xl text-xs font-bold">
@@ -314,6 +327,14 @@ export default function SalaryPage({ employees, orders, currentUser }) {
           })}
         </div>
       )}
+
+      {/* Employee Edit Modal */}
+      <EmployeeModal
+        isOpen={empModal.isOpen}
+        onClose={() => setEmpModal({ isOpen: false, data: null })}
+        onSave={handleSaveEmployee}
+        initialData={empModal.data}
+      />
     </div>
   );
 }

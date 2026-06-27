@@ -797,9 +797,9 @@ function App() {
                           <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{m.phone || 'لا يوجد هاتف'}</p>
                         </div>
                       </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setActiveMerchantModal({ isOpen: true, data: m })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => deleteArrayItem('merchants', m.id, 'مسح هذا التاجر؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <div className="flex gap-1">
+                        <button onClick={() => setActiveMerchantModal({ isOpen: true, data: m })} className="p-2 rounded-xl text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteArrayItem('merchants', m.id, 'مسح هذا التاجر؟')} className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
@@ -846,9 +846,9 @@ function App() {
                             <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{a.phone || 'لا يوجد هاتف'}</p>
                           </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setActiveAgentModal({ isOpen: true, data: a })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 className="w-4 h-4" /></button>
-                          <button onClick={() => deleteArrayItem('agents', a.id, 'مسح هذا المندوب؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <div className="flex gap-1">
+                          <button onClick={() => setActiveAgentModal({ isOpen: true, data: a })} className="p-2 rounded-xl text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
+                          <button onClick={() => deleteArrayItem('agents', a.id, 'مسح هذا المندوب؟')} className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-2 mb-4">
@@ -929,9 +929,9 @@ function App() {
                         <p className="text-xs text-slate-400 mt-0.5">{exp.date}</p>
                       </div>
                       <p className="font-black text-xl text-red-600 shrink-0">{Number(exp.amount || 0).toLocaleString()} <span className="text-xs font-normal text-red-400">ج.م</span></p>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        <button onClick={() => setActiveExpenseModal({ isOpen: true, data: exp })} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => deleteArrayItem('expenses', exp.id, 'مسح هذا المصروف؟')} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => setActiveExpenseModal({ isOpen: true, data: exp })} className="p-2 rounded-xl text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="تعديل"><Edit3 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteArrayItem('expenses', exp.id, 'مسح هذا المصروف؟')} className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors" title="حذف"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                   ))}
