@@ -326,25 +326,71 @@ function App() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
         
-        const importedOrders = data.map(row => ({
-          id: Math.random().toString(36).substr(2, 9),
-          date: today(),
-          sender: row['الراسل']?.toString() || '',
-          code: row['الكود']?.toString() || '',
-          customerName: (row['الاسم'] || row['اسم العميل'])?.toString() || '',
-          center: (row['المنطقه'] || row['المركز'])?.toString() || '',
-          phone: row['الرقم']?.toString() || '',
-          count: Number(row['العدد']) || 1,
-          total: Number(row['السعر'] || row['الإجمالي']) || 0,
-          agent: row['المندوب']?.toString() || '',
-          status: row['الموقف']?.toString() || '',
-          collected: Number(row['المحصل']) || 0,
-          commission: Number(row['العمولة']) || 20,
-          returns: row['المرتجعات']?.toString() || '',
-          notes: row['ملاحظات']?.toString() || '',
-          company: row['الشركات']?.toString() || '',
-          settled: false
-        }));
+        if (data.length === 0) {
+          alert('الملف فارغ أو يحتوي على بيانات غير صالحة.');
+          return;
+        }
+
+        // Helper to find value from row by checking a list of column aliases
+        const findValue = (row, aliases) => {
+          const rowKeys = Object.keys(row);
+          // First pass: look for exact clean matches
+          for (const alias of aliases) {
+            const cleanAlias = alias.replace(/[\s_\-\.]/g, '').toLowerCase();
+            for (const rk of rowKeys) {
+              const cleanRk = rk.trim().replace(/[\s_\-\.]/g, '').toLowerCase();
+              if (cleanRk === cleanAlias) {
+                return row[rk];
+              }
+            }
+          }
+          // Second pass: look for partial matches (excluding short ambiguous keys)
+          for (const alias of aliases) {
+            if (alias.length < 3) continue; 
+            const cleanAlias = alias.replace(/[\s_\-\.]/g, '').toLowerCase();
+            for (const rk of rowKeys) {
+              const cleanRk = rk.trim().replace(/[\s_\-\.]/g, '').toLowerCase();
+              if (cleanRk.includes(cleanAlias)) {
+                return row[rk];
+              }
+            }
+          }
+          return '';
+        };
+
+        const importedOrders = data.map(row => {
+          const company = findValue(row, ['الشركة', 'الشركه', 'الراسل', 'اسم الراسل', 'اسم الشركة', 'اسم الشركه', 'company', 'sender', 'merchant'])?.toString().trim() || '';
+          const code = findValue(row, ['الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'رقم الاوردر', 'رقم الطلب', 'code', 'order_id', 'id'])?.toString().trim() || '';
+          const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'العميل', 'customer', 'name', 'customer_name'])?.toString().trim() || '';
+          const center = findValue(row, ['المنطقه', 'المنطقة', 'المركز', 'العنوان', 'المحافظة', 'المحافظه', 'العنوان بالتفصيل', 'address', 'center', 'region', 'city'])?.toString().trim() || '';
+          const phone = findValue(row, ['الهاتف', 'رقم الهاتف', 'التليفون', 'رقم التليفون', 'تليفون', 'الموبايل', 'رقم الموبايل', 'phone', 'mobile', 'tel'])?.toString().trim() || '';
+          const total = Number(findValue(row, ['السعر', 'السعر شامل الشحن', 'الإجمالي', 'الاجمالي', 'القيمة', 'القيمه', 'قيمة الشحنة', 'total', 'price', 'amount'])) || 0;
+          const agent = findValue(row, ['المندوب', 'اسم المندوب', 'agent', 'delivery'])?.toString().trim() || '';
+          const status = findValue(row, ['الموقف', 'الحالة', 'الحاله', 'حالة الطلب', 'status'])?.toString().trim() || '';
+          const commission = Number(findValue(row, ['العمولة', 'العموله', 'عمولة المندوب', 'commission', 'agent_commission'])) || 20;
+          const notes = findValue(row, ['ملاحظات', 'الملاحظات', 'البيان', 'notes', 'comment'])?.toString().trim() || '';
+          const returns = findValue(row, ['المرتجعات', 'المرتجع', 'returns'])?.toString().trim() || '';
+
+          return {
+            id: Math.random().toString(36).substr(2, 9),
+            date: today(),
+            sender: company,
+            code,
+            customerName,
+            center,
+            phone,
+            count: Number(row['العدد']) || 1,
+            total,
+            agent,
+            status,
+            collected: status === 'تم التسليم' || status === 'جزئي' ? total : 0,
+            commission,
+            returns,
+            notes,
+            company,
+            settled: false
+          };
+        });
 
         if (importedOrders.length > 0) {
           // Save all to Firestore
