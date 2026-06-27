@@ -1023,6 +1023,39 @@ function App() {
         agents={agents}
       />
 
+      {/* Merchant Modal */}
+      <MerchantModal
+        isOpen={activeMerchantModal.isOpen}
+        onClose={() => setActiveMerchantModal({ isOpen: false, data: null })}
+        onSave={(data) => handleSaveEntity('merchants', setActiveMerchantModal, data)}
+        initialData={activeMerchantModal.data}
+      />
+
+      {/* Agent Modal */}
+      <AgentModal
+        isOpen={activeAgentModal.isOpen}
+        onClose={() => setActiveAgentModal({ isOpen: false, data: null })}
+        onSave={(data) => handleSaveEntity('agents', setActiveAgentModal, data)}
+        initialData={activeAgentModal.data}
+      />
+
+      {/* Expense Modal */}
+      <ExpenseModal
+        isOpen={activeExpenseModal.isOpen}
+        onClose={() => setActiveExpenseModal({ isOpen: false, data: null })}
+        onSave={(data) => handleSaveEntity('expenses', setActiveExpenseModal, data)}
+        initialData={activeExpenseModal.data}
+      />
+
+      {/* Employee Modal */}
+      <EmployeeModal
+        isOpen={activeEmployeeModal.isOpen}
+        onClose={() => setActiveEmployeeModal({ isOpen: false, data: null })}
+        onSave={(data) => handleSaveEntity('employees', setActiveEmployeeModal, data)}
+        initialData={activeEmployeeModal.data}
+      />
+
+
       {/* Barcode Scanner */}
       {showScanner && (
         <BarcodeScanner isOpen={showScanner} onClose={() => setShowScanner(false)} orders={orders} onScan={handleScannerStatusUpdate} />
