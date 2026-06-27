@@ -101,12 +101,19 @@ function App() {
 
   // --- Firebase Sync ---
   useEffect(() => {
-    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => setOrders(snap.docs.map(d => d.data())));
-    const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())));
-    const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())));
-    const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())));
-    const unsubExpenses = onSnapshot(collection(db, 'expenses'), snap => setExpenses(snap.docs.map(d => d.data())));
-    const unsubSalaries = onSnapshot(collection(db, 'salary_payments'), snap => setSalaryPayments(snap.docs.map(d => d.data())));
+    const handleSyncError = (err) => {
+      console.error("Firebase Sync Error: ", err);
+      if (err.code === 'permission-denied') {
+        alert("تنبيه هام: تم رفض الوصول لقاعدة البيانات. يرجى التأكد من تغيير قواعد حماية Firestore (Rules) في لوحة تحكم Firebase لتصبح:\n\nallow read, write: if true;\n\nبدون ذلك، لن يتم حفظ أو مزامنة أي بيانات!");
+      }
+    };
+
+    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => setOrders(snap.docs.map(d => d.data())), handleSyncError);
+    const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
+    const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())), handleSyncError);
+    const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())), handleSyncError);
+    const unsubExpenses = onSnapshot(collection(db, 'expenses'), snap => setExpenses(snap.docs.map(d => d.data())), handleSyncError);
+    const unsubSalaries = onSnapshot(collection(db, 'salary_payments'), snap => setSalaryPayments(snap.docs.map(d => d.data())), handleSyncError);
     setupDefaultAdmin();
     return () => { 
       unsubOrders(); 
