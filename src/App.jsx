@@ -669,25 +669,32 @@ function App() {
             {/* Orders Table — View Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
               <div className="overflow-x-auto flex-1 custom-scrollbar">
-                <table className="w-full text-sm text-right print:text-xs">
+                <table className="w-full text-xs text-right print:text-[10px]">
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
-                    <tr className="border-b border-slate-200">
-                      <th className="px-3 py-3.5 text-center w-12">#</th>
-                      <th className="px-3 py-3.5">الشركة</th>
-                      <th className="px-3 py-3.5">الاسم</th>
-                      <th className="px-3 py-3.5">المنطقة</th>
-                      <th className="px-3 py-3.5 text-center">الرقم</th>
-                      <th className="px-3 py-3.5 text-center">السعر</th>
-                      <th className="px-3 py-3.5">المندوب</th>
-                      <th className="px-3 py-3.5 text-center">الموقف</th>
-                      <th className="px-3 py-3.5 text-center">المحصل</th>
-                      <th className="px-3 py-3.5 text-center font-bold text-indigo-600">الصافي</th>
-                      <th className="px-3 py-3.5 text-center w-24 print:hidden">إجراءات</th>
+                    <tr className="border-b border-slate-200 whitespace-nowrap">
+                      <th className="px-2 py-3 text-center w-10">#</th>
+                      <th className="px-2 py-3 text-center">المراجعه</th>
+                      <th className="px-2 py-3">الراسل</th>
+                      <th className="px-2 py-3 text-center">ك</th>
+                      <th className="px-2 py-3">الاسم</th>
+                      <th className="px-2 py-3">العنوان</th>
+                      <th className="px-2 py-3 text-center">الرقم</th>
+                      <th className="px-2 py-3 text-center">العدد</th>
+                      <th className="px-2 py-3 text-center">الاجمالى</th>
+                      <th className="px-2 py-3">المناديب</th>
+                      <th className="px-2 py-3 text-center">الموقف</th>
+                      <th className="px-2 py-3 text-center">المحصل</th>
+                      <th className="px-2 py-3 text-center">العموله</th>
+                      <th className="px-2 py-3 text-center font-bold text-indigo-600">الصافى</th>
+                      <th className="px-2 py-3 text-center">المرتجع</th>
+                      <th className="px-2 py-3">ملاحظات</th>
+                      <th className="px-2 py-3">الشركات</th>
+                      <th className="px-2 py-3 text-center w-24 print:hidden">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOrders.length === 0 ? (
-                      <tr><td colSpan="11" className="text-center py-20">
+                      <tr><td colSpan="18" className="text-center py-20">
                         <div className="flex flex-col items-center gap-3">
                           <Package className="w-12 h-12 text-slate-200" />
                           <p className="text-slate-400 font-medium">لا توجد طلبات حالياً</p>
@@ -697,27 +704,28 @@ function App() {
                     ) : filteredOrders.map((order, index) => {
                       const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
                       return (
-                        <tr key={order.id} onClick={() => openEditModal(order)} className={`border-b border-slate-100/80 cursor-pointer transition-all duration-150 ${isCanceled ? 'opacity-50' : ''} ${order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
-                          <td className="px-3 py-3 text-center">
+                        <tr key={order.id} onClick={() => openEditModal(order)} className={`border-b border-slate-100/80 cursor-pointer transition-all duration-150 whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
+                          <td className="px-2 py-2.5 text-center">
                             <span className="text-xs text-slate-400 font-mono">{index + 1}</span>
                             {order.settled && <Lock className="w-3 h-3 text-emerald-400 inline-block mr-1" />}
                           </td>
-                          <td className="px-3 py-3">
-                            <span className="font-bold text-indigo-700 text-sm">{order.company || '—'}</span>
-                            {order.sender && <span className="block text-[10px] text-slate-400 mt-0.5">{order.sender}</span>}
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className="font-semibold text-slate-800">{order.customerName || '—'}</span>
-                            {order.code && <span className="block text-[10px] text-slate-400 mt-0.5 font-mono">#{order.code}</span>}
-                          </td>
-                          <td className="px-3 py-3 text-slate-600 text-xs">{order.center || '—'}</td>
-                          <td className="px-3 py-3 text-center text-xs font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-3 py-3 text-center font-bold text-slate-700">{Number(order.total).toLocaleString()}</td>
-                          <td className="px-3 py-3 text-xs text-slate-600">{order.agent || '—'}</td>
-                          <td className="px-3 py-3 text-center"><StatusBadge status={order.status} /></td>
-                          <td className="px-3 py-3 text-center font-bold text-slate-700">{Number(order.collected).toLocaleString()}</td>
-                          <td className="px-3 py-3 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
-                          <td className="px-3 py-3 text-center print:hidden" onClick={e => e.stopPropagation()}>
+                          <td className="px-2 py-2.5 text-center text-slate-600">{order.review || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-700 font-semibold">{order.sender || '—'}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-800 font-bold">{order.customerName || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-600">{order.center || '—'}</td>
+                          <td className="px-2 py-2.5 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600 font-bold">{order.count || 1}</td>
+                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-slate-600">{order.agent || '—'}</td>
+                          <td className="px-2 py-2.5 text-center"><StatusBadge status={order.status} /></td>
+                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.collected || 0).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600">{Number(order.commission || 0).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600">{order.returns || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-500 max-w-[150px] truncate">{order.notes || '—'}</td>
+                          <td className="px-2 py-2.5 text-indigo-700 font-bold">{order.company || '—'}</td>
+                          <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
                                 <Printer className="w-3.5 h-3.5" />
@@ -801,25 +809,31 @@ function App() {
             {/* Company Summary Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
               <div className="overflow-x-auto flex-1 custom-scrollbar">
-                <table className="w-full text-sm text-right print:text-xs">
+                <table className="w-full text-xs text-right print:text-[10px]">
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
-                    <tr className="border-b border-slate-200">
-                      <th className="px-3 py-3.5 text-center w-12">#</th>
-                      <th className="px-3 py-3.5">الشركة</th>
-                      <th className="px-3 py-3.5">الاسم</th>
-                      <th className="px-3 py-3.5">المنطقة</th>
-                      <th className="px-3 py-3.5 text-center">الرقم</th>
-                      <th className="px-3 py-3.5 text-center">السعر</th>
-                      <th className="px-3 py-3.5">المندوب</th>
-                      <th className="px-3 py-3.5 text-center">الموقف</th>
-                      <th className="px-3 py-3.5 text-center">المحصل</th>
-                      <th className="px-3 py-3.5 text-center">العمولة</th>
-                      <th className="px-3 py-3.5 text-center font-bold text-indigo-600">الصافي</th>
+                    <tr className="border-b border-slate-200 whitespace-nowrap">
+                      <th className="px-2 py-3 text-center w-10">#</th>
+                      <th className="px-2 py-3 text-center">المراجعه</th>
+                      <th className="px-2 py-3">الراسل</th>
+                      <th className="px-2 py-3 text-center">ك</th>
+                      <th className="px-2 py-3">الاسم</th>
+                      <th className="px-2 py-3">العنوان</th>
+                      <th className="px-2 py-3 text-center">الرقم</th>
+                      <th className="px-2 py-3 text-center">العدد</th>
+                      <th className="px-2 py-3 text-center">الاجمالى</th>
+                      <th className="px-2 py-3">المناديب</th>
+                      <th className="px-2 py-3 text-center">الموقف</th>
+                      <th className="px-2 py-3 text-center">المحصل</th>
+                      <th className="px-2 py-3 text-center">العموله</th>
+                      <th className="px-2 py-3 text-center font-bold text-indigo-600">الصافى</th>
+                      <th className="px-2 py-3 text-center">المرتجع</th>
+                      <th className="px-2 py-3">ملاحظات</th>
+                      <th className="px-2 py-3">الشركات</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOrders.length === 0 ? (
-                      <tr><td colSpan="11" className="text-center py-24">
+                      <tr><td colSpan="17" className="text-center py-24">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-2">
                             <Store className="w-8 h-8 text-slate-300" />
@@ -831,18 +845,24 @@ function App() {
                     ) : filteredOrders.map((order, index) => {
                       const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
                       return (
-                        <tr key={order.id} className={`border-b border-slate-100/80 transition-colors ${isCanceled ? 'opacity-50' : ''} ${order.settled ? 'bg-emerald-50/20' : 'hover:bg-slate-50/50'}`}>
-                          <td className="px-3 py-3 text-center text-xs text-slate-400 font-mono">{index + 1}</td>
-                          <td className="px-3 py-3 font-bold text-indigo-700 text-sm">{order.company || '—'}</td>
-                          <td className="px-3 py-3 font-semibold text-slate-800">{order.customerName}</td>
-                          <td className="px-3 py-3 text-slate-600 text-xs">{order.center}</td>
-                          <td className="px-3 py-3 text-center text-xs font-mono text-slate-500" dir="ltr">{order.phone}</td>
-                          <td className="px-3 py-3 text-center font-bold text-slate-700">{Number(order.total).toLocaleString()}</td>
-                          <td className="px-3 py-3 text-xs text-slate-600">{order.agent}</td>
-                          <td className="px-3 py-3 text-center"><StatusBadge status={order.status} /></td>
-                          <td className="px-3 py-3 text-center font-bold text-slate-700">{Number(order.collected).toLocaleString()}</td>
-                          <td className="px-3 py-3 text-center text-slate-600">{order.commission}</td>
-                          <td className="px-3 py-3 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                        <tr key={order.id} className={`border-b border-slate-100/80 transition-colors whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${order.settled ? 'bg-emerald-50/20' : 'hover:bg-slate-50/50'}`}>
+                          <td className="px-2 py-2.5 text-center text-xs text-slate-400 font-mono">{index + 1}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600">{order.review || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-700 font-semibold">{order.sender || '—'}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-800 font-bold">{order.customerName || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-600">{order.center || '—'}</td>
+                          <td className="px-2 py-2.5 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600 font-bold">{order.count || 1}</td>
+                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-slate-600">{order.agent || '—'}</td>
+                          <td className="px-2 py-2.5 text-center"><StatusBadge status={order.status} /></td>
+                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.collected || 0).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600">{Number(order.commission || 0).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-2 py-2.5 text-center text-slate-600">{order.returns || '—'}</td>
+                          <td className="px-2 py-2.5 text-slate-500 max-w-[150px] truncate">{order.notes || '—'}</td>
+                          <td className="px-2 py-2.5 text-indigo-700 font-bold">{order.company || '—'}</td>
                         </tr>
                       );
                     })}
