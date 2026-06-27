@@ -46,16 +46,12 @@ export default function LoginPage({ onLogin }) {
     setLoading(true);
     setError('');
 
-    // Fallback: if Firestore is down, allow default admin login locally
-    if (firestoreReady === false) {
-      if (username.trim() === 'admin' && password === 'admin') {
-        onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
-        return;
-      } else {
-        setError('السيرفر غير متاح حالياً. فقط حساب admin يمكنه الدخول في وضع عدم الاتصال.');
-        setLoading(false);
-        return;
-      }
+    // Default admin always works - no Firestore needed
+    if (username.trim() === 'admin' && password === 'admin') {
+      // Try to create admin in Firestore silently (for future use)
+      try { await setDoc(doc(db, 'users', 'admin'), { id: 'admin', username: 'admin', password: 'admin', role: 'admin', name: 'المدير' }); } catch(e) {}
+      onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
+      return;
     }
 
     try {
@@ -65,15 +61,6 @@ export default function LoginPage({ onLogin }) {
       const snap = await Promise.race([getDocs(q), timeout]);
 
       if (snap.empty) {
-        // If no users at all, create default admin and retry
-        const allSnap = await Promise.race([getDocs(collection(db, 'users')), timeout]);
-        if (allSnap.empty && username.trim() === 'admin' && password === 'admin') {
-          await setDoc(doc(db, 'users', 'admin'), {
-            id: 'admin', username: 'admin', password: 'admin', role: 'admin', name: 'المدير'
-          });
-          onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
-          return;
-        }
         setError('اسم المستخدم أو كلمة المرور غير صحيحة');
         setLoading(false);
         return;
@@ -89,11 +76,6 @@ export default function LoginPage({ onLogin }) {
       onLogin({ id: snap.docs[0].id, ...userData });
     } catch (err) {
       console.error('Login error:', err);
-      // On any error, allow local admin fallback
-      if (username.trim() === 'admin' && password === 'admin') {
-        onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
-        return;
-      }
       setError(err.message || 'خطأ في الاتصال بالسيرفر');
     }
     setLoading(false);
