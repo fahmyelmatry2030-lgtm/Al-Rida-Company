@@ -757,22 +757,97 @@ function App() {
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-650 cursor-pointer" />
                           </td>
-                          <td className="px-2 py-2.5 text-center text-slate-600">{order.review || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-700 font-semibold">{order.sender || '—'}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-800 font-bold">{order.customerName || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-600">{order.center || '—'}</td>
-                          <td className="px-2 py-2.5 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-600 font-bold">{order.count || 1}</td>
-                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-slate-600">{order.agent || '—'}</td>
-                          <td className="px-2 py-2.5 text-center"><StatusBadge status={order.status} /></td>
-                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.collected || 0).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-600">{Number(order.commission || 0).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-600">{order.returns || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-500 max-w-[150px] truncate">{order.notes || '—'}</td>
-                          <td className="px-2 py-2.5 text-indigo-700 font-bold">{order.company || '—'}</td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-review-' + (order.review || '')}
+                              type="text" 
+                              defaultValue={order.review || ''} 
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-slate-750 font-semibold">{order.sender || '—'}</td>
+                          <td className="px-2 py-1 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
+                          <td className="px-2 py-1 text-slate-800 font-bold">{order.customerName || '—'}</td>
+                          <td className="px-2 py-1 text-slate-650">{order.center || '—'}</td>
+                          <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
+                          <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                            <select 
+                              value={order.agent || ''} 
+                              onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white w-28"
+                            >
+                              <option value="">اختر المندوب...</option>
+                              {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <select 
+                              value={order.status || ''} 
+                              onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
+                              className={`border rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-550 w-28 text-center ${
+                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <option value="">اختر الحالة...</option>
+                              {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-collected-' + (order.collected || 0)}
+                              type="number" 
+                              defaultValue={order.collected || 0} 
+                              onBlur={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-800 font-extrabold w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-commission-' + (order.commission || 0)}
+                              type="number" 
+                              defaultValue={order.commission || 0} 
+                              onBlur={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-returns-' + (order.returns || '')}
+                              type="text" 
+                              defaultValue={order.returns || ''} 
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-notes-' + (order.notes || '')}
+                              type="text" 
+                              defaultValue={order.notes || ''} 
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-indigo-700 font-bold">{order.company || '—'}</td>
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
@@ -950,22 +1025,97 @@ function App() {
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-650 cursor-pointer" />
                           </td>
-                          <td className="px-2 py-2.5 text-center text-slate-600">{order.review || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-700 font-semibold">{order.sender || '—'}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-800 font-bold">{order.customerName || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-600">{order.center || '—'}</td>
-                          <td className="px-2 py-2.5 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-600 font-bold">{order.count || 1}</td>
-                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-slate-600">{order.agent || '—'}</td>
-                          <td className="px-2 py-2.5 text-center"><StatusBadge status={order.status} /></td>
-                          <td className="px-2 py-2.5 text-center font-bold text-slate-700">{Number(order.collected || 0).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-600">{Number(order.commission || 0).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-center font-extrabold text-indigo-700">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
-                          <td className="px-2 py-2.5 text-center text-slate-600">{order.returns || '—'}</td>
-                          <td className="px-2 py-2.5 text-slate-500 max-w-[150px] truncate">{order.notes || '—'}</td>
-                          <td className="px-2 py-2.5 text-indigo-700 font-bold">{order.company || '—'}</td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-review-' + (order.review || '')}
+                              type="text" 
+                              defaultValue={order.review || ''} 
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-slate-750 font-semibold">{order.sender || '—'}</td>
+                          <td className="px-2 py-1 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
+                          <td className="px-2 py-1 text-slate-800 font-bold">{order.customerName || '—'}</td>
+                          <td className="px-2 py-1 text-slate-650">{order.center || '—'}</td>
+                          <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
+                          <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                            <select 
+                              value={order.agent || ''} 
+                              onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white w-28"
+                            >
+                              <option value="">اختر المندوب...</option>
+                              {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <select 
+                              value={order.status || ''} 
+                              onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
+                              className={`border rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-550 w-28 text-center ${
+                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <option value="">اختر الحالة...</option>
+                              {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-collected-' + (order.collected || 0)}
+                              type="number" 
+                              defaultValue={order.collected || 0} 
+                              onBlur={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-800 font-extrabold w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-commission-' + (order.commission || 0)}
+                              type="number" 
+                              defaultValue={order.commission || 0} 
+                              onBlur={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-returns-' + (order.returns || '')}
+                              type="text" 
+                              defaultValue={order.returns || ''} 
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                            <input 
+                              key={order.id + '-notes-' + (order.notes || '')}
+                              type="text" 
+                              defaultValue={order.notes || ''} 
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
+                              }}
+                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-indigo-700 font-bold">{order.company || '—'}</td>
                         </tr>
                       );
                     })}
