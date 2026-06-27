@@ -14,6 +14,7 @@ import { UserCog, ScanLine } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
+import SalaryPage from './SalaryPage';
 
 const STATUS_OPTIONS = [
   { label: 'تم التسليم', value: 'تم التسليم', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
@@ -942,69 +943,13 @@ function App() {
 
         {/* ============ SALARIES ============ */}
         {activeTab === 'salaries' && (
-          <div className="flex flex-col gap-5">
-            {employeesList.length === 0 ? (
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4"><WalletCards className="w-8 h-8 text-indigo-300" /></div>
-                <p className="text-slate-400 font-semibold">لا يوجد موظفين</p>
-                <p className="text-slate-300 text-sm mt-1">اضغط "إضافة موظف" للبدء</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {employeesList.map((emp, index) => (
-                  <div key={emp.id} className="group bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg hover:border-indigo-100 transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
-                    <div className="p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-500/20">
-                            {(emp.name || 'م').charAt(0)}
-                          </div>
-                          <input list="agents-list" type="text" value={emp.name} onChange={e => handleArrayChange(setEmployees, emp.id, 'name', e.target.value)}
-                            className="font-black text-slate-800 bg-transparent border-b-2 border-transparent hover:border-indigo-200 focus:border-indigo-400 outline-none transition-colors text-base" placeholder="اسم الموظف" />
-                        </div>
-                        <button onClick={() => deleteArrayItem(setEmployees, emp.id, 'مسح هذا الموظف؟')}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-slate-50 rounded-xl p-3">
-                          <p className="text-xs text-slate-400 mb-1">📦 الأوردرات</p>
-                          <p className="font-black text-slate-800">{emp.ordersCount > 0 ? emp.ordersCount : '—'}</p>
-                        </div>
-                        <div className="bg-emerald-50 rounded-xl p-3">
-                          <p className="text-xs text-emerald-500 mb-1">💰 عمولات</p>
-                          <p className="font-black text-emerald-700">{emp.totalCommissions > 0 ? emp.totalCommissions.toLocaleString() : '—'}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-slate-50 rounded-xl p-2.5">
-                          <p className="text-xs text-slate-400 mb-1.5">الراتب الأساسي</p>
-                          <input type="number" value={emp.baseSalary || ''} onChange={e => handleArrayChange(setEmployees, emp.id, 'baseSalary', e.target.value)}
-                            className="w-full bg-white border border-slate-200 focus:border-indigo-400 rounded-lg px-2 py-1.5 text-sm text-center font-bold outline-none transition-colors" placeholder="0" />
-                        </div>
-                        <div className="bg-red-50 rounded-xl p-2.5">
-                          <p className="text-xs text-red-400 mb-1.5">خصومات</p>
-                          <input type="number" value={emp.deductions || ''} onChange={e => handleArrayChange(setEmployees, emp.id, 'deductions', e.target.value)}
-                            className="w-full bg-white border border-red-200 focus:border-red-400 rounded-lg px-2 py-1.5 text-sm text-center font-bold text-red-600 outline-none transition-colors" placeholder="0" />
-                        </div>
-                        <div className="bg-amber-50 rounded-xl p-2.5">
-                          <p className="text-xs text-amber-500 mb-1.5">سلف</p>
-                          <input type="number" value={emp.advances || ''} onChange={e => handleArrayChange(setEmployees, emp.id, 'advances', e.target.value)}
-                            className="w-full bg-white border border-amber-200 focus:border-amber-400 rounded-lg px-2 py-1.5 text-sm text-center font-bold text-amber-600 outline-none transition-colors" placeholder="0" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-l from-indigo-600 to-purple-600 px-5 py-3.5 flex items-center justify-between">
-                      <span className="text-white/70 text-sm font-semibold">الصافي</span>
-                      <span className="text-white font-black text-xl">{emp.netSalary.toLocaleString()} <span className="text-xs font-normal text-white/60">ج.م</span></span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <SalaryPage
+            employees={employees}
+            orders={orders}
+            currentUser={currentUser}
+          />
         )}
+
 
         {/* ============ USERS ============ */}
         {activeTab === 'users' && (
