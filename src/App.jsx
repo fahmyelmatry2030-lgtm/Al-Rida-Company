@@ -96,6 +96,7 @@ function App() {
   const [merchants, setMerchants] = useState([]);
   const [agents, setAgents] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [salaryPayments, setSalaryPayments] = useState([]);
 
 
   // --- Firebase Sync ---
@@ -105,8 +106,16 @@ function App() {
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())));
     const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())));
     const unsubExpenses = onSnapshot(collection(db, 'expenses'), snap => setExpenses(snap.docs.map(d => d.data())));
+    const unsubSalaries = onSnapshot(collection(db, 'salary_payments'), snap => setSalaryPayments(snap.docs.map(d => d.data())));
     setupDefaultAdmin();
-    return () => { unsubOrders(); unsubEmployees(); unsubMerchants(); unsubAgents(); unsubExpenses(); };
+    return () => { 
+      unsubOrders(); 
+      unsubEmployees(); 
+      unsubMerchants(); 
+      unsubAgents(); 
+      unsubExpenses(); 
+      unsubSalaries(); 
+    };
   }, []);
 
   const migrateFromLocal = async () => {
@@ -185,15 +194,21 @@ function App() {
   };
 
   // --- Settlement Logic ---
-  const settleOrders = () => {
+  const settleOrders = async () => {
     const ordersToSettle = filteredOrders.filter(o => !o.settled);
     if (ordersToSettle.length === 0) return alert('لا يوجد طلبات جديدة للتقفيل.');
     const unsetStatuses = ordersToSettle.filter(o => !o.status);
     if (unsetStatuses.length > 0) return alert(`يوجد ${unsetStatuses.length} طلبات بدون حالة (موقف). يرجى تحديد حالة كل الطلبات قبل التقفيل.`);
     
     if (window.confirm(`هل تريد تقفيل ${ordersToSettle.length} طلب${selectedCompany !== 'الكل' ? ' لشركة ' + selectedCompany : ''}؟\n\nبعد التقفيل لن تتمكن من تعديل هذه الطلبات.`)) {
-      const idsToSettle = new Set(ordersToSettle.map(o => o.id));
-      setOrders(prev => prev.map(o => idsToSettle.has(o.id) ? { ...o, settled: true } : o));
+      try {
+        for (const o of ordersToSettle) {
+          await setDoc(doc(db, 'orders', o.id), { ...o, settled: true });
+        }
+        alert('تم تقفيل وحفظ الطلبات بنجاح!');
+      } catch (err) {
+        alert('خطأ أثناء التقفيل: ' + err.message);
+      }
     }
   };
 
@@ -249,9 +264,9 @@ function App() {
   // Company Overall Profit
   const companyProfits = useMemo(() => {
     const totalCompanyNet = orders.reduce((sum, o) => sum + calculateNet(o.collected, o.commission), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) + salaryPayments.reduce((sum, p) => sum + (Number(p.netSalary) || 0), 0);
     return { totalCompanyNet, totalExpenses, netProfit: totalCompanyNet - totalExpenses };
-  }, [orders, expenses]);
+  }, [orders, expenses, salaryPayments]);
 
   // CRUD helpers
   const deleteArrayItem = async (collectionName, id, msg) => {
