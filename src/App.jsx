@@ -202,6 +202,10 @@ function App() {
 
   const filteredOrders = useMemo(() => {
     let result = orders;
+    // Agent sees only their own orders
+    if (currentUser?.role === 'agent') {
+      result = result.filter(o => o.agent === currentUser.name);
+    }
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
       result = result.filter(o => o.company === selectedCompany);
     }
@@ -225,7 +229,7 @@ function App() {
       );
     }
     return result;
-  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled]);
+  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser]);
 
   const summaryStats = useMemo(() => {
     return filteredOrders.reduce((acc, order) => {
@@ -361,6 +365,7 @@ function App() {
   const handleLogin = (user) => {
     sessionStorage.setItem('currentUser', JSON.stringify(user));
     setCurrentUser(user);
+    if (user.role === 'agent') setActiveTab('data-entry');
   };
 
   const handleLogout = () => {
@@ -404,12 +409,12 @@ function App() {
           </div>
         </div>
         <nav className="flex-1 p-3 flex flex-col gap-1">
-          <NavButton id="dashboard" icon={TrendingUp} label="لوحة التحكم" />
-          <NavButton id="data-entry" icon={FileSpreadsheet} label="الطلبات والإدخال" />
-          <NavButton id="company-summary" icon={BarChart3} label="تقفيل الشركات" />
-          <div className="my-2 border-t border-white/5"></div>
-          <NavButton id="merchants" icon={Store} label="التجار" />
-          <NavButton id="agents" icon={UserCircle} label="المناديب" />
+          {!isAgent && <NavButton id="dashboard" icon={TrendingUp} label="لوحة التحكم" />}
+          <NavButton id="data-entry" icon={FileSpreadsheet} label={isAgent ? 'طلباتي' : 'الطلبات والإدخال'} />
+          {!isAgent && <NavButton id="company-summary" icon={BarChart3} label="تقفيل الشركات" />}
+          {!isAgent && <div className="my-2 border-t border-white/5"></div>}
+          {!isAgent && <NavButton id="merchants" icon={Store} label="التجار" />}
+          {!isAgent && <NavButton id="agents" icon={UserCircle} label="المناديب" />}
           {(isAdmin) && <div className="my-2 border-t border-white/5"></div>}
           {isAdmin && <NavButton id="salaries" icon={WalletCards} label="المرتبات" />}
           {isAdmin && <NavButton id="expenses" icon={Receipt} label="الخزينة" />}
