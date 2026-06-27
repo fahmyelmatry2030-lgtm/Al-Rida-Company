@@ -318,7 +318,7 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
@@ -347,8 +347,11 @@ function App() {
         }));
 
         if (importedOrders.length > 0) {
-          setOrders(prev => [...importedOrders, ...prev]);
-          alert(`تم استيراد ${importedOrders.length} طلب بنجاح.`);
+          // Save all to Firestore
+          for (const order of importedOrders) {
+            await setDoc(doc(db, 'orders', order.id), order);
+          }
+          alert(`تم استيراد ${importedOrders.length} طلب بنجاح وحفظهم في قاعدة البيانات.`);
         }
       } catch (err) {
         alert('حدث خطأ أثناء استيراد الملف. تأكد أنه ملف إكسيل صحيح.');
