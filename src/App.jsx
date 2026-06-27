@@ -472,11 +472,6 @@ function App() {
               </div>
             )}
 
-            
-        {/* ============ DASHBOARD ============ */}
-        {activeTab === 'dashboard' && (
-          <Dashboard orders={orders} merchants={merchants} agents={agents} expenses={expenses} companyProfits={companyProfits} />
-        )}
 
         {activeTab === 'data-entry' && (
               <button onClick={openAddModal} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
@@ -550,6 +545,11 @@ function App() {
            </h1>
            <p className="text-gray-500">تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')}</p>
         </div>
+
+        {/* ============ DASHBOARD ============ */}
+        {activeTab === 'dashboard' && (
+          <Dashboard orders={orders} merchants={merchants} agents={agents} expenses={expenses} companyProfits={companyProfits} />
+        )}
 
         {/* ============ DATA ENTRY ============ */}
         {activeTab === 'data-entry' && (
