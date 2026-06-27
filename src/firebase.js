@@ -3,13 +3,13 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCsg_Zk0TTJrFCVgZjy4I07TYG1pb8eGeg",
-  authDomain: "elrade.firebaseapp.com",
-  projectId: "elrade",
-  storageBucket: "elrade.firebasestorage.app",
-  messagingSenderId: "1954163201",
-  appId: "1:1954163201:web:495659dfd256359b486e00",
-  measurementId: "G-LE5WMY2WNH"
+  apiKey: "AIzaSyBW6LMdPFaE-r03pf5VV577WWd0nJzOzvc",
+  authDomain: "elrade-936c2.firebaseapp.com",
+  projectId: "elrade-936c2",
+  storageBucket: "elrade-936c2.firebasestorage.app",
+  messagingSenderId: "981886130398",
+  appId: "1:981886130398:web:49e8807a565bbca8308a4f",
+  measurementId: "G-R8Q0L0CXQT"
 };
 
 // Initialize Firebase
