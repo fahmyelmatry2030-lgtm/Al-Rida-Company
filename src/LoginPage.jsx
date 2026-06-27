@@ -1,13 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { Truck, User, Lock, LogIn, AlertCircle } from 'lucide-react';
+import { collection, getDocs, query, where, setDoc, doc } from 'firebase/firestore';
+import { Truck, User, Lock, LogIn, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 
 export default function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [firestoreReady, setFirestoreReady] = useState(null); // null=checking, true=ok, false=error
+
+  // Check Firestore connection & setup default admin on mount
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      try {
+        // Try to read users collection with a 8-second timeout
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+        const read = getDocs(collection(db, 'users'));
+        const snap = await Promise.race([read, timeout]);
+
+        if (cancelled) return;
+
+        // If empty, create default admin
+        if (snap.empty) {
+          await setDoc(doc(db, 'users', 'admin'), {
+            id: 'admin', username: 'admin', password: 'admin', role: 'admin', name: 'المدير'
+          });
+        }
+        setFirestoreReady(true);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('Firestore not available:', err.message);
+          setFirestoreReady(false);
+        }
+      }
+    };
+    init();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,11 +46,34 @@ export default function LoginPage({ onLogin }) {
     setLoading(true);
     setError('');
 
+    // Fallback: if Firestore is down, allow default admin login locally
+    if (firestoreReady === false) {
+      if (username.trim() === 'admin' && password === 'admin') {
+        onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
+        return;
+      } else {
+        setError('السيرفر غير متاح حالياً. فقط حساب admin يمكنه الدخول في وضع عدم الاتصال.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
+      // Race the query against a 10-second timeout
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('انتهت مهلة الاتصال بالسيرفر. تحقق من اتصالك بالإنترنت.')), 10000));
       const q = query(collection(db, 'users'), where('username', '==', username.trim()));
-      const snap = await getDocs(q);
+      const snap = await Promise.race([getDocs(q), timeout]);
 
       if (snap.empty) {
+        // If no users at all, create default admin and retry
+        const allSnap = await Promise.race([getDocs(collection(db, 'users')), timeout]);
+        if (allSnap.empty && username.trim() === 'admin' && password === 'admin') {
+          await setDoc(doc(db, 'users', 'admin'), {
+            id: 'admin', username: 'admin', password: 'admin', role: 'admin', name: 'المدير'
+          });
+          onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
+          return;
+        }
         setError('اسم المستخدم أو كلمة المرور غير صحيحة');
         setLoading(false);
         return;
@@ -34,7 +88,13 @@ export default function LoginPage({ onLogin }) {
 
       onLogin({ id: snap.docs[0].id, ...userData });
     } catch (err) {
-      setError('خطأ في الاتصال بالسيرفر: ' + err.message);
+      console.error('Login error:', err);
+      // On any error, allow local admin fallback
+      if (username.trim() === 'admin' && password === 'admin') {
+        onLogin({ id: 'admin', username: 'admin', role: 'admin', name: 'المدير' });
+        return;
+      }
+      setError(err.message || 'خطأ في الاتصال بالسيرفر');
     }
     setLoading(false);
   };
@@ -56,7 +116,25 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 shadow-2xl shadow-black/20">
-          <h2 className="text-xl font-bold text-white mb-6">تسجيل الدخول</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">تسجيل الدخول</h2>
+            {firestoreReady === null && (
+              <div className="flex items-center gap-1.5 text-yellow-300/70 text-xs">
+                <div className="w-3 h-3 border border-yellow-300/70 border-t-transparent rounded-full animate-spin"></div>
+                جاري الاتصال...
+              </div>
+            )}
+            {firestoreReady === true && (
+              <div className="flex items-center gap-1.5 text-emerald-400 text-xs">
+                <Wifi className="w-3.5 h-3.5" /> متصل
+              </div>
+            )}
+            {firestoreReady === false && (
+              <div className="flex items-center gap-1.5 text-amber-400 text-xs">
+                <WifiOff className="w-3.5 h-3.5" /> غير متصل
+              </div>
+            )}
+          </div>
           
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
