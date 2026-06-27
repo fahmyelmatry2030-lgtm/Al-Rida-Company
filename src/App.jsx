@@ -57,6 +57,10 @@ function App() {
   const [activeExpenseModal, setActiveExpenseModal] = useState({ isOpen: false, data: null });
   const [activeEmployeeModal, setActiveEmployeeModal] = useState({ isOpen: false, data: null });
   const [waybillOrder, setWaybillOrder] = useState(null);
+  const [waybillOrders, setWaybillOrders] = useState([]);
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState('25');
   const [showTracking, setShowTracking] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('currentUser')); } catch { return null; }
@@ -252,6 +256,43 @@ function App() {
     }
     return result;
   }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedOrderIds([]);
+  }, [activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled]);
+
+  const totalPages = useMemo(() => {
+    if (pageSize === 'الكل') return 1;
+    return Math.ceil(filteredOrders.length / Number(pageSize));
+  }, [filteredOrders, pageSize]);
+
+  const paginatedOrders = useMemo(() => {
+    if (pageSize === 'الكل') return filteredOrders;
+    const start = (currentPage - 1) * Number(pageSize);
+    return filteredOrders.slice(start, start + Number(pageSize));
+  }, [filteredOrders, currentPage, pageSize]);
+
+  const isAllSelected = useMemo(() => {
+    if (paginatedOrders.length === 0) return false;
+    return paginatedOrders.every(o => selectedOrderIds.includes(o.id));
+  }, [paginatedOrders, selectedOrderIds]);
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      const paginatedIds = paginatedOrders.map(o => o.id);
+      setSelectedOrderIds(prev => prev.filter(id => !paginatedIds.includes(id)));
+    } else {
+      const paginatedIds = paginatedOrders.map(o => o.id);
+      setSelectedOrderIds(prev => [...new Set([...prev, ...paginatedIds])]);
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   const summaryStats = useMemo(() => {
     return filteredOrders.reduce((acc, order) => {
@@ -673,6 +714,9 @@ function App() {
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
                     <tr className="border-b border-slate-200 whitespace-nowrap">
                       <th className="px-2 py-3 text-center w-10">#</th>
+                      <th className="px-2 py-3 text-center w-8 print:hidden">
+                        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                      </th>
                       <th className="px-2 py-3 text-center">المراجعه</th>
                       <th className="px-2 py-3">الراسل</th>
                       <th className="px-2 py-3 text-center">ك</th>
@@ -693,21 +737,25 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrders.length === 0 ? (
-                      <tr><td colSpan="18" className="text-center py-20">
+                    {paginatedOrders.length === 0 ? (
+                      <tr><td colSpan="19" className="text-center py-20">
                         <div className="flex flex-col items-center gap-3">
                           <Package className="w-12 h-12 text-slate-200" />
                           <p className="text-slate-400 font-medium">لا توجد طلبات حالياً</p>
                           <button onClick={openAddModal} className="text-indigo-600 text-sm font-bold hover:underline">+ إضافة أول طلب</button>
                         </div>
                       </td></tr>
-                    ) : filteredOrders.map((order, index) => {
+                    ) : paginatedOrders.map((order, index) => {
                       const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
+                      const isSelected = selectedOrderIds.includes(order.id);
                       return (
-                        <tr key={order.id} onClick={() => openEditModal(order)} className={`border-b border-slate-100/80 cursor-pointer transition-all duration-150 whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
+                        <tr key={order.id} onClick={() => openEditModal(order)} className={`border-b border-slate-100/80 cursor-pointer transition-all duration-150 whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${isSelected ? 'bg-indigo-50/50' : order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
                           <td className="px-2 py-2.5 text-center">
-                            <span className="text-xs text-slate-400 font-mono">{index + 1}</span>
+                            <span className="text-xs text-slate-400 font-mono">{(currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + index + 1}</span>
                             {order.settled && <Lock className="w-3 h-3 text-emerald-400 inline-block mr-1" />}
+                          </td>
+                          <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-650 cursor-pointer" />
                           </td>
                           <td className="px-2 py-2.5 text-center text-slate-600">{order.review || '—'}</td>
                           <td className="px-2 py-2.5 text-slate-700 font-semibold">{order.sender || '—'}</td>
@@ -745,6 +793,54 @@ function App() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 p-4 bg-slate-50/50 print:hidden text-xs text-slate-500">
+                <div>
+                  عرض {filteredOrders.length === 0 ? 0 : Math.min(filteredOrders.length, (currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + 1)} إلى {Math.min(filteredOrders.length, currentPage * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)))} من أصل {filteredOrders.length} شحنة
+                </div>
+                
+                {pageSize !== 'الكل' && totalPages > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      disabled={currentPage === 1} 
+                      onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-all font-bold"
+                    >
+                      السابق
+                    </button>
+                    <span className="text-slate-600 px-2">
+                      صفحة <strong className="text-slate-800">{currentPage}</strong> من <strong className="text-slate-800">{totalPages}</strong>
+                    </span>
+                    <button 
+                      disabled={currentPage === totalPages} 
+                      onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-all font-bold"
+                    >
+                      التالي
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">الصفوف بالصفحة:</span>
+                  <select 
+                    value={pageSize} 
+                    onChange={(e) => {
+                      setPageSize(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-2 py-1 rounded-lg outline-none cursor-pointer"
+                  >
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="250">250</option>
+                    <option value="الكل">الكل</option>
+                  </select>
+                </div>
               </div>
             </div>
           </>
@@ -813,6 +909,9 @@ function App() {
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
                     <tr className="border-b border-slate-200 whitespace-nowrap">
                       <th className="px-2 py-3 text-center w-10">#</th>
+                      <th className="px-2 py-3 text-center w-8 print:hidden">
+                        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                      </th>
                       <th className="px-2 py-3 text-center">المراجعه</th>
                       <th className="px-2 py-3">الراسل</th>
                       <th className="px-2 py-3 text-center">ك</th>
@@ -832,8 +931,8 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrders.length === 0 ? (
-                      <tr><td colSpan="17" className="text-center py-24">
+                    {paginatedOrders.length === 0 ? (
+                      <tr><td colSpan="18" className="text-center py-24">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-2">
                             <Store className="w-8 h-8 text-slate-300" />
@@ -842,11 +941,15 @@ function App() {
                           <p className="text-slate-400 text-sm">قم باستيراد ملف شيت الإكسيل أو أضف طلبات يدوياً</p>
                         </div>
                       </td></tr>
-                    ) : filteredOrders.map((order, index) => {
+                    ) : paginatedOrders.map((order, index) => {
                       const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
+                      const isSelected = selectedOrderIds.includes(order.id);
                       return (
-                        <tr key={order.id} className={`border-b border-slate-100/80 transition-colors whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${order.settled ? 'bg-emerald-50/20' : 'hover:bg-slate-50/50'}`}>
-                          <td className="px-2 py-2.5 text-center text-xs text-slate-400 font-mono">{index + 1}</td>
+                        <tr key={order.id} className={`border-b border-slate-100/80 transition-colors whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${isSelected ? 'bg-indigo-50/50' : order.settled ? 'bg-emerald-50/20' : 'hover:bg-slate-50/50'}`}>
+                          <td className="px-2 py-2.5 text-center text-xs text-slate-400 font-mono">{(currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + index + 1}</td>
+                          <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-650 cursor-pointer" />
+                          </td>
                           <td className="px-2 py-2.5 text-center text-slate-600">{order.review || '—'}</td>
                           <td className="px-2 py-2.5 text-slate-700 font-semibold">{order.sender || '—'}</td>
                           <td className="px-2 py-2.5 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
@@ -868,6 +971,54 @@ function App() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 p-4 bg-slate-50/50 print:hidden text-xs text-slate-500">
+                <div>
+                  عرض {filteredOrders.length === 0 ? 0 : Math.min(filteredOrders.length, (currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + 1)} إلى {Math.min(filteredOrders.length, currentPage * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)))} من أصل {filteredOrders.length} شحنة
+                </div>
+                
+                {pageSize !== 'الكل' && totalPages > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      disabled={currentPage === 1} 
+                      onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-all font-bold"
+                    >
+                      السابق
+                    </button>
+                    <span className="text-slate-600 px-2">
+                      صفحة <strong className="text-slate-800">{currentPage}</strong> من <strong className="text-slate-800">{totalPages}</strong>
+                    </span>
+                    <button 
+                      disabled={currentPage === totalPages} 
+                      onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-all font-bold"
+                    >
+                      التالي
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">الصفوف بالصفحة:</span>
+                  <select 
+                    value={pageSize} 
+                    onChange={(e) => {
+                      setPageSize(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 px-2 py-1 rounded-lg outline-none cursor-pointer"
+                  >
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="250">250</option>
+                    <option value="الكل">الكل</option>
+                  </select>
+                </div>
               </div>
             </div>
           </>
@@ -1107,6 +1258,151 @@ function App() {
 
       {/* Waybill Print Modal */}
       {waybillOrder && <Waybill order={waybillOrder} onClose={() => setWaybillOrder(null)} />}
+      {waybillOrders.length > 0 && <Waybill orders={waybillOrders} onClose={() => setWaybillOrders([])} />}
+
+      {/* Bulk Actions Floating Bar */}
+      {selectedOrderIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl px-6 py-4 flex flex-wrap items-center gap-4 shadow-2xl border border-slate-700/50 animate-slideUp max-w-[95%]">
+          <div className="flex items-center gap-2">
+            <span className="bg-indigo-600 text-xs px-2.5 py-1 rounded-full font-bold">{selectedOrderIds.length}</span>
+            <span className="text-sm font-semibold text-slate-300">تم التحديد</span>
+          </div>
+
+          <div className="h-6 w-px bg-slate-700/60" />
+
+          {/* Bulk Update Status */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">تغيير الموقف:</span>
+            <select 
+              onChange={async (e) => {
+                const val = e.target.value;
+                if (!val) return;
+                if (window.confirm(`هل أنت متأكد من تغيير موقف ${selectedOrderIds.length} طلب إلى "${val}"؟`)) {
+                  try {
+                    const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
+                    for (const id of selectedOrderIds) {
+                      const o = orders.find(x => x.id === id);
+                      if (o && !o.settled) {
+                        let updated = { ...o, status: val };
+                        if (zeroCollectedStatuses.includes(val)) updated.collected = 0;
+                        else if (['تم التسليم', 'اوت زون', 'نزول'].includes(val)) updated.collected = o.total;
+                        await setDoc(doc(db, 'orders', id), updated);
+                      }
+                    }
+                    setSelectedOrderIds([]);
+                    e.target.value = '';
+                  } catch(err) {
+                    alert('خطأ أثناء التعديل الجماعي: ' + err.message);
+                  }
+                }
+              }}
+              className="bg-slate-800 text-xs font-semibold text-white px-2 py-1.5 rounded-lg border border-slate-700 outline-none cursor-pointer"
+            >
+              <option value="">اختر الحالة...</option>
+              {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </div>
+
+          {/* Bulk Update Agent */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">تغيير المندوب:</span>
+            <select 
+              onChange={async (e) => {
+                const val = e.target.value;
+                if (!val) return;
+                if (window.confirm(`هل أنت متأكد من إسناد ${selectedOrderIds.length} طلب للمندوب "${val}"؟`)) {
+                  try {
+                    for (const id of selectedOrderIds) {
+                      const o = orders.find(x => x.id === id);
+                      if (o && !o.settled) {
+                        await setDoc(doc(db, 'orders', id), { ...o, agent: val });
+                      }
+                    }
+                    setSelectedOrderIds([]);
+                    e.target.value = '';
+                  } catch(err) {
+                    alert('خطأ أثناء التعديل الجماعي: ' + err.message);
+                  }
+                }
+              }}
+              className="bg-slate-800 text-xs font-semibold text-white px-2 py-1.5 rounded-lg border border-slate-700 outline-none cursor-pointer"
+            >
+              <option value="">اختر المندوب...</option>
+              {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+            </select>
+          </div>
+
+          {/* Bulk Update Commission */}
+          <button 
+            onClick={async () => {
+              const commStr = window.prompt("أدخل قيمة العمولة الجديدة لجميع الطلبات المحددة:");
+              if (commStr === null) return;
+              const comm = Number(commStr);
+              if (isNaN(comm)) return alert('يرجى إدخال رقم صحيح.');
+              try {
+                for (const id of selectedOrderIds) {
+                  const o = orders.find(x => x.id === id);
+                  if (o && !o.settled) {
+                    await setDoc(doc(db, 'orders', id), { ...o, commission: comm });
+                  }
+                }
+                setSelectedOrderIds([]);
+              } catch(err) {
+                alert('خطأ أثناء التعديل الجماعي: ' + err.message);
+              }
+            }}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition-colors"
+          >
+            تعديل العمولة
+          </button>
+
+          <div className="h-6 w-px bg-slate-700/60" />
+
+          {/* Bulk Actions (Print / Delete / Cancel) */}
+          <div className="flex items-center gap-1.5">
+            <button 
+              onClick={() => {
+                const ordersToPrint = orders.filter(o => selectedOrderIds.includes(o.id));
+                setWaybillOrders(ordersToPrint);
+              }}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-emerald-600/10"
+            >
+              <Printer className="w-3.5 h-3.5" /> طباعة البوالص ({selectedOrderIds.length})
+            </button>
+
+            <button 
+              onClick={async () => {
+                if (window.confirm(`هل أنت متأكد من مسح ${selectedOrderIds.length} طلب محدد نهائياً؟`)) {
+                  try {
+                    let deletedCount = 0;
+                    for (const id of selectedOrderIds) {
+                      const o = orders.find(x => x.id === id);
+                      if (o && !o.settled) {
+                        await deleteDoc(doc(db, 'orders', id));
+                        deletedCount++;
+                      }
+                    }
+                    setSelectedOrderIds([]);
+                    alert(`تم حذف ${deletedCount} طلب بنجاح.`);
+                  } catch(err) {
+                    alert('خطأ أثناء الحذف: ' + err.message);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-red-600/10"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> حذف المحدد
+            </button>
+
+            <button 
+              onClick={() => setSelectedOrderIds([])}
+              className="text-xs font-medium text-slate-400 hover:text-white px-2 py-1.5 transition-colors"
+            >
+              إلغاء التحديد
+            </button>
+          </div>
+        </div>
+      )}
 
       <datalist id="agents-list">{agents.map(a => <option key={a.id} value={a.name} />)}</datalist>
 
@@ -1117,6 +1413,8 @@ function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover{background:#94a3b8}
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes zoom-in-95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slide-up { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        .animate-slideUp { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-in { animation-fill-mode: both; }
         .fade-in { animation-name: fade-in; }
         .zoom-in-95 { animation-name: zoom-in-95; }
