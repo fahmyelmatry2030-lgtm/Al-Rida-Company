@@ -6,6 +6,11 @@ import OrderModal from './OrderModal';
 import Dashboard from './Dashboard';
 import Waybill from './Waybill';
 import TrackingPage from './TrackingPage';
+import LoginPage from './LoginPage';
+import UsersPage from './UsersPage';
+import BarcodeScanner from './BarcodeScanner';
+import { setupDefaultAdmin } from './setupUsers';
+import { UserCog, ScanLine } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
@@ -52,6 +57,10 @@ function App() {
   const [activeEmployeeModal, setActiveEmployeeModal] = useState({ isOpen: false, data: null });
   const [waybillOrder, setWaybillOrder] = useState(null);
   const [showTracking, setShowTracking] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('currentUser')); } catch { return null; }
+  });
+  const [showScanner, setShowScanner] = useState(false);
 
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
@@ -95,6 +104,7 @@ function App() {
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())));
     const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())));
     const unsubExpenses = onSnapshot(collection(db, 'expenses'), snap => setExpenses(snap.docs.map(d => d.data())));
+    setupDefaultAdmin();
     return () => { unsubOrders(); unsubEmployees(); unsubMerchants(); unsubAgents(); unsubExpenses(); };
   }, []);
 
@@ -347,6 +357,33 @@ function App() {
     return { total: todayOrders.length, delivered: todayDelivered, pending: todayPending, collected: todayTotal };
   }, [orders]);
 
+  const handleLogin = (user) => {
+    sessionStorage.setItem('currentUser', JSON.stringify(user));
+    setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('currentUser');
+    setCurrentUser(null);
+  };
+
+  const handleScannerStatusUpdate = async (orderId, status) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    try {
+      await setDoc(doc(db, 'orders', orderId), { ...order, status });
+    } catch(err) { alert('خطأ: ' + err.message); }
+  };
+
+  // Role-based tab access
+  const isAdmin = currentUser?.role === 'admin';
+  const isSecretary = currentUser?.role === 'secretary';
+  const isAgent = currentUser?.role === 'agent';
+
+  if (!currentUser) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   if (showTracking) {
     return <TrackingPage onBack={() => setShowTracking(false)} />;
   }
@@ -372,10 +409,15 @@ function App() {
           <div className="my-2 border-t border-white/5"></div>
           <NavButton id="merchants" icon={Store} label="التجار" />
           <NavButton id="agents" icon={UserCircle} label="المناديب" />
+          {(isAdmin) && <div className="my-2 border-t border-white/5"></div>}
+          {isAdmin && <NavButton id="salaries" icon={WalletCards} label="المرتبات" />}
+          {isAdmin && <NavButton id="expenses" icon={Receipt} label="الخزينة" />}
           <div className="my-2 border-t border-white/5"></div>
-          <NavButton id="salaries" icon={WalletCards} label="المرتبات" />
-          <NavButton id="expenses" icon={Receipt} label="الخزينة" />
+          {isAdmin && <NavButton id="users" icon={UserCog} label="المستخدمون" />}
           <div className="my-2 border-t border-white/5"></div>
+          <button onClick={() => setShowScanner(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5">
+            <ScanLine className="w-5 h-5" /> <span className="font-medium">ماسح الباركود</span>
+          </button>
           <button onClick={() => setShowTracking(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5">
             <Eye className="w-5 h-5" /> <span className="font-medium">تتبع الشحنات</span>
           </button>
@@ -391,7 +433,14 @@ function App() {
               <CheckCircle className="w-3 h-3" /> تم تثبيت التطبيق
             </div>
           )}
-          <p className="text-center text-[10px] text-white/20">البيانات محفوظة على السيرفر ☁️</p>
+          <div className="bg-white/5 rounded-xl p-3 mb-2">
+            <p className="text-white/80 font-bold text-sm">{currentUser?.name}</p>
+            <p className="text-white/40 text-xs mt-0.5">{currentUser?.role === 'admin' ? '👑 مدير' : currentUser?.role === 'secretary' ? '📋 سكرتير' : '🚚 مندوب'}</p>
+          </div>
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs font-bold py-2 rounded-xl transition-colors">
+            خروج من الحساب
+          </button>
+          <p className="text-center text-[10px] text-white/20 mt-1">البيانات محفوظة على السيرفر ☁️</p>
         </div>
       </aside>
 
@@ -409,6 +458,7 @@ function App() {
               {activeTab === 'agents' && 'المناديب'}
               {activeTab === 'salaries' && 'إدارة المرتبات'}
               {activeTab === 'expenses' && 'الخزينة والمصروفات'}
+              {activeTab === 'users' && 'إدارة المستخدمين'}
             </h2>
             <p className="text-sm text-slate-400 mt-0.5">{new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
@@ -873,6 +923,11 @@ function App() {
           </div>
         )}
 
+        {/* ============ USERS ============ */}
+        {activeTab === 'users' && (
+          <UsersPage currentUser={currentUser} />
+        )}
+
       </main>
 
       {/* Order Modal */}
@@ -884,6 +939,11 @@ function App() {
         merchants={merchants}
         agents={agents}
       />
+
+      {/* Barcode Scanner */}
+      {showScanner && (
+        <BarcodeScanner isOpen={showScanner} onClose={() => setShowScanner(false)} orders={orders} onScan={handleScannerStatusUpdate} />
+      )}
 
       {/* Waybill Print Modal */}
       {waybillOrder && <Waybill order={waybillOrder} onClose={() => setWaybillOrder(null)} />}
