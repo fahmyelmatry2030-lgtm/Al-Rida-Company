@@ -919,7 +919,7 @@ function App() {
                       const isCanceled = ['لاغي', 'رفض شحن'].includes(order.status);
                       const isSelected = selectedOrderIds.includes(order.id);
                       return (
-                        <tr key={order.id} onClick={() => openEditModal(order)} className={`border-b border-slate-100/80 cursor-pointer transition-all duration-150 ${isCanceled ? 'opacity-50' : ''} ${isSelected ? 'bg-indigo-50/50' : order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
+                        <tr key={order.id} onClick={() => !isAgent && openEditModal(order)} className={`border-b border-slate-100/80 ${isAgent ? '' : 'cursor-pointer'} transition-all duration-150 ${isCanceled ? 'opacity-50' : ''} ${isSelected ? 'bg-indigo-50/50' : order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
                           <td className="px-3 py-3 text-center">
                             <span className="text-xs text-slate-400 font-mono">{(currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + index + 1}</span>
                             {order.settled && <Lock className="w-3 h-3 text-emerald-400 inline-block mr-1" />}
@@ -932,11 +932,12 @@ function App() {
                               key={order.id + '-review-' + (order.review || '')}
                               type="text" 
                               defaultValue={order.review || ''} 
+                              disabled={isAgent}
                               onBlur={(e) => {
                                 const val = e.target.value.trim();
                                 if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
                               }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 w-14 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 w-14 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                             />
                           </td>
                           <td className="px-3 py-2 text-slate-800 font-semibold whitespace-normal break-words max-w-[150px] text-[14px]">{order.sender || '—'}</td>
@@ -950,7 +951,8 @@ function App() {
                             <select 
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28"
+                              disabled={isAgent}
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                             >
                               <option value="">اختر المندوب...</option>
                               {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
@@ -985,11 +987,12 @@ function App() {
                               key={order.id + '-commission-' + (order.commission || 0)}
                               type="number" 
                               defaultValue={order.commission || 0} 
+                              disabled={isAgent}
                               onBlur={(e) => {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
                               }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                             />
                           </td>
                           <td className="px-3 py-2 text-center font-black text-indigo-750 text-[15px]">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
@@ -1023,10 +1026,12 @@ function App() {
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
                                 <Printer className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => openEditModal(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل">
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              {!order.settled && (
+                              {!isAgent && (
+                                <button onClick={() => openEditModal(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="تعديل">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {!isAgent && !order.settled && (
                                 <button onClick={() => deleteRow(order.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="حذف">
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
