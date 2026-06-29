@@ -928,30 +928,30 @@ function App() {
             {/* Orders Table — View Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
               <div className="overflow-x-auto flex-1 custom-scrollbar">
-                <table className="w-full text-xs text-right print:text-[10px]">
-                  <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
+                <table className="w-full text-sm text-right print:text-xs">
+                  <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-550 font-bold sticky top-0 z-10">
                     <tr className="border-b border-slate-200 whitespace-nowrap">
-                      <th className="px-2 py-3 text-center w-10">#</th>
-                      <th className="px-2 py-3 text-center w-8 print:hidden">
+                      <th className="px-3 py-3.5 text-center w-10">#</th>
+                      <th className="px-3 py-3.5 text-center w-8 print:hidden">
                         <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                       </th>
-                      <th className="px-2 py-3 text-center">المراجعه</th>
-                      <th className="px-2 py-3">الراسل</th>
-                      <th className="px-2 py-3 text-center">ك</th>
-                      <th className="px-2 py-3">الاسم</th>
-                      <th className="px-2 py-3">العنوان</th>
-                      <th className="px-2 py-3 text-center">الرقم</th>
-                      <th className="px-2 py-3 text-center">العدد</th>
-                      <th className="px-2 py-3 text-center">الاجمالى</th>
-                      <th className="px-2 py-3">المناديب</th>
-                      <th className="px-2 py-3 text-center">الموقف</th>
-                      <th className="px-2 py-3 text-center">المحصل</th>
-                      <th className="px-2 py-3 text-center">العموله</th>
-                      <th className="px-2 py-3 text-center font-bold text-indigo-600">الصافى</th>
-                      <th className="px-2 py-3 text-center">المرتجع</th>
-                      <th className="px-2 py-3">ملاحظات</th>
-                      <th className="px-2 py-3">الشركات</th>
-                      <th className="px-2 py-3 text-center w-24 print:hidden">إجراءات</th>
+                      <th className="px-3 py-3.5 text-center min-w-[90px]">المراجعه</th>
+                      <th className="px-3 py-3.5 min-w-[150px]">الراسل</th>
+                      <th className="px-3 py-3.5 text-center min-w-[90px]">ك</th>
+                      <th className="px-3 py-3.5 min-w-[160px]">الاسم</th>
+                      <th className="px-3 py-3.5 min-w-[280px]">العنوان</th>
+                      <th className="px-3 py-3.5 text-center min-w-[130px]">الرقم</th>
+                      <th className="px-3 py-3.5 text-center min-w-[70px]">العدد</th>
+                      <th className="px-3 py-3.5 text-center min-w-[110px]">الاجمالى</th>
+                      <th className="px-3 py-3.5 min-w-[150px]">المناديب</th>
+                      <th className="px-3 py-3.5 text-center min-w-[140px]">الموقف</th>
+                      <th className="px-3 py-3.5 text-center min-w-[110px]">المحصل</th>
+                      <th className="px-3 py-3.5 text-center min-w-[90px]">العموله</th>
+                      <th className="px-3 py-3.5 text-center min-w-[110px] font-bold text-indigo-600">الصافى</th>
+                      <th className="px-3 py-3.5 text-center min-w-[100px]">المرتجع</th>
+                      <th className="px-3 py-3.5 min-w-[200px]">ملاحظات</th>
+                      <th className="px-3 py-3.5 min-w-[150px]">الشركات</th>
+                      <th className="px-3 py-3.5 text-center w-24 print:hidden">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -968,14 +968,14 @@ function App() {
                       const isSelected = selectedOrderIds.includes(order.id);
                       return (
                         <tr key={order.id} onClick={() => openEditModal(order)} className={`border-b border-slate-100/80 cursor-pointer transition-all duration-150 whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${isSelected ? 'bg-indigo-50/50' : order.settled ? 'bg-emerald-50/30' : 'hover:bg-indigo-50/40'}`}>
-                          <td className="px-2 py-2.5 text-center">
+                          <td className="px-3 py-3 text-center">
                             <span className="text-xs text-slate-400 font-mono">{(currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + index + 1}</span>
                             {order.settled && <Lock className="w-3 h-3 text-emerald-400 inline-block mr-1" />}
                           </td>
-                          <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-650 cursor-pointer" />
+                          <td className="px-3 py-3 text-center print:hidden" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-655 cursor-pointer" />
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-review-' + (order.review || '')}
                               type="text" 
@@ -984,31 +984,31 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[130px] whitespace-normal break-words">{order.sender || '—'}</td>
-                          <td className="px-2 py-1 text-center text-slate-500 font-mono">{order.code || '—'}</td>
-                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[130px] whitespace-normal break-words">{order.customerName || '—'}</td>
-                          <td className="px-2 py-1 text-slate-650 min-w-[200px] max-w-[300px] whitespace-normal break-words">{order.center || '—'}</td>
-                          <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
-                          <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
-                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-slate-750 font-semibold whitespace-normal break-words max-w-[150px]">{order.sender || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-500 font-mono">{order.code || '—'}</td>
+                          <td className="px-3 py-2 text-slate-800 font-bold whitespace-normal break-words max-w-[160px]">{order.customerName || '—'}</td>
+                          <td className="px-3 py-2 text-slate-700 whitespace-normal break-words min-w-[280px]">{order.center || '—'}</td>
+                          <td className="px-3 py-2 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-650 font-bold">{order.count || 1}</td>
+                          <td className="px-3 py-2 text-center font-bold text-slate-800">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <select 
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white w-28"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-36"
                             >
                               <option value="">اختر المندوب...</option>
                               {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                             </select>
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <select 
                               value={order.status || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
-                              className={`border rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-550 w-28 text-center ${
+                              className={`border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 w-32 text-center ${
                                 STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-200'
                               }`}
                             >
@@ -1016,7 +1016,7 @@ function App() {
                               {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                             </select>
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-collected-' + (order.collected || 0)}
                               type="number" 
@@ -1025,10 +1025,10 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-800 font-extrabold w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-800 font-extrabold w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-commission-' + (order.commission || 0)}
                               type="number" 
@@ -1037,11 +1037,11 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-returns-' + (order.returns || '')}
                               type="text" 
@@ -1050,10 +1050,10 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-notes-' + (order.notes || '')}
                               type="text" 
@@ -1062,10 +1062,10 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-44 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[120px] whitespace-normal break-words">{order.company || '—'}</td>
+                          <td className="px-3 py-2 text-indigo-700 font-bold whitespace-normal break-words max-w-[140px]">{order.company || '—'}</td>
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
@@ -1198,29 +1198,29 @@ function App() {
             {/* Company Summary Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
               <div className="overflow-x-auto flex-1 custom-scrollbar">
-                <table className="w-full text-xs text-right print:text-[10px]">
-                  <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
+                <table className="w-full text-sm text-right print:text-xs">
+                  <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-550 font-bold sticky top-0 z-10">
                     <tr className="border-b border-slate-200 whitespace-nowrap">
-                      <th className="px-2 py-3 text-center w-10">#</th>
-                      <th className="px-2 py-3 text-center w-8 print:hidden">
+                      <th className="px-3 py-3.5 text-center w-10">#</th>
+                      <th className="px-3 py-3.5 text-center w-8 print:hidden">
                         <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                       </th>
-                      <th className="px-2 py-3 text-center">المراجعه</th>
-                      <th className="px-2 py-3">الراسل</th>
-                      <th className="px-2 py-3 text-center">ك</th>
-                      <th className="px-2 py-3">الاسم</th>
-                      <th className="px-2 py-3">العنوان</th>
-                      <th className="px-2 py-3 text-center">الرقم</th>
-                      <th className="px-2 py-3 text-center">العدد</th>
-                      <th className="px-2 py-3 text-center">الاجمالى</th>
-                      <th className="px-2 py-3">المناديب</th>
-                      <th className="px-2 py-3 text-center">الموقف</th>
-                      <th className="px-2 py-3 text-center">المحصل</th>
-                      <th className="px-2 py-3 text-center">العموله</th>
-                      <th className="px-2 py-3 text-center font-bold text-indigo-600">الصافى</th>
-                      <th className="px-2 py-3 text-center">المرتجع</th>
-                      <th className="px-2 py-3">ملاحظات</th>
-                      <th className="px-2 py-3">الشركات</th>
+                      <th className="px-3 py-3.5 text-center min-w-[90px]">المراجعه</th>
+                      <th className="px-3 py-3.5 min-w-[150px]">الراسل</th>
+                      <th className="px-3 py-3.5 text-center min-w-[90px]">ك</th>
+                      <th className="px-3 py-3.5 min-w-[160px]">الاسم</th>
+                      <th className="px-3 py-3.5 min-w-[280px]">العنوان</th>
+                      <th className="px-3 py-3.5 text-center min-w-[130px]">الرقم</th>
+                      <th className="px-3 py-3.5 text-center min-w-[70px]">العدد</th>
+                      <th className="px-3 py-3.5 text-center min-w-[110px]">الاجمالى</th>
+                      <th className="px-3 py-3.5 min-w-[150px]">المناديب</th>
+                      <th className="px-3 py-3.5 text-center min-w-[140px]">الموقف</th>
+                      <th className="px-3 py-3.5 text-center min-w-[110px]">المحصل</th>
+                      <th className="px-3 py-3.5 text-center min-w-[90px]">العموله</th>
+                      <th className="px-3 py-3.5 text-center min-w-[110px] font-bold text-indigo-600">الصافى</th>
+                      <th className="px-3 py-3.5 text-center min-w-[100px]">المرتجع</th>
+                      <th className="px-3 py-3.5 min-w-[200px]">ملاحظات</th>
+                      <th className="px-3 py-3.5 min-w-[150px]">الشركات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1239,11 +1239,11 @@ function App() {
                       const isSelected = selectedOrderIds.includes(order.id);
                       return (
                         <tr key={order.id} className={`border-b border-slate-100/80 transition-colors whitespace-nowrap ${isCanceled ? 'opacity-50' : ''} ${isSelected ? 'bg-indigo-50/50' : order.settled ? 'bg-emerald-50/20' : 'hover:bg-slate-50/50'}`}>
-                          <td className="px-2 py-2.5 text-center text-xs text-slate-400 font-mono">{(currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + index + 1}</td>
-                          <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-3 text-center text-xs text-slate-400 font-mono">{(currentPage - 1) * (pageSize === 'الكل' ? filteredOrders.length : Number(pageSize)) + index + 1}</td>
+                          <td className="px-3 py-3 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(order.id)} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-650 cursor-pointer" />
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-review-' + (order.review || '')}
                               type="text" 
@@ -1252,31 +1252,31 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[130px] whitespace-normal break-words">{order.sender || '—'}</td>
-                          <td className="px-2 py-1 text-center text-slate-500 font-mono">{order.code || '—'}</td>
-                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[130px] whitespace-normal break-words">{order.customerName || '—'}</td>
-                          <td className="px-2 py-1 text-slate-650 min-w-[200px] max-w-[300px] whitespace-normal break-words">{order.center || '—'}</td>
-                          <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
-                          <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
-                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-slate-750 font-semibold whitespace-normal break-words max-w-[150px]">{order.sender || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-500 font-mono">{order.code || '—'}</td>
+                          <td className="px-3 py-2 text-slate-800 font-bold whitespace-normal break-words max-w-[160px]">{order.customerName || '—'}</td>
+                          <td className="px-3 py-2 text-slate-700 whitespace-normal break-words min-w-[280px]">{order.center || '—'}</td>
+                          <td className="px-3 py-2 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-650 font-bold">{order.count || 1}</td>
+                          <td className="px-3 py-2 text-center font-bold text-slate-800">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <select 
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white w-28"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-36"
                             >
                               <option value="">اختر المندوب...</option>
                               {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                             </select>
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <select 
                               value={order.status || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
-                              className={`border rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-550 w-28 text-center ${
+                              className={`border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 w-32 text-center ${
                                 STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-200'
                               }`}
                             >
@@ -1284,7 +1284,7 @@ function App() {
                               {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                             </select>
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-collected-' + (order.collected || 0)}
                               type="number" 
@@ -1293,10 +1293,10 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-800 font-extrabold w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-800 font-extrabold w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-commission-' + (order.commission || 0)}
                               type="number" 
@@ -1305,11 +1305,11 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1 py-0.5 text-xs text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
-                          <td className="px-2 py-1 text-center" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-returns-' + (order.returns || '')}
                               type="text" 
@@ -1318,10 +1318,10 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-notes-' + (order.notes || '')}
                               type="text" 
@@ -1330,10 +1330,10 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
                               }}
-                              className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-44 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[120px] whitespace-normal break-words">{order.company || '—'}</td>
+                          <td className="px-3 py-2 text-indigo-700 font-bold whitespace-normal break-words max-w-[140px]">{order.company || '—'}</td>
                         </tr>
                       );
                     })}
