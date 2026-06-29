@@ -354,7 +354,13 @@ function App() {
         (o.company && o.company.toLowerCase().includes(q))
       );
     }
-    return result;
+    
+    // Sort alphanumerically by code (natural sorting)
+    return [...result].sort((a, b) => {
+      const codeA = String(a.code || '');
+      const codeB = String(b.code || '');
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
   }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser]);
 
   useEffect(() => {
