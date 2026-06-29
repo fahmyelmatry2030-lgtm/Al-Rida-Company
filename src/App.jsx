@@ -987,10 +987,10 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[120px] truncate" title={order.sender || ''}>{order.sender || '—'}</td>
+                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[130px] whitespace-normal break-words">{order.sender || '—'}</td>
                           <td className="px-2 py-1 text-center text-slate-500 font-mono">{order.code || '—'}</td>
-                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[120px] truncate" title={order.customerName || ''}>{order.customerName || '—'}</td>
-                          <td className="px-2 py-1 text-slate-650 max-w-[150px] truncate" title={order.center || ''}>{order.center || '—'}</td>
+                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[130px] whitespace-normal break-words">{order.customerName || '—'}</td>
+                          <td className="px-2 py-1 text-slate-650 min-w-[200px] max-w-[300px] whitespace-normal break-words">{order.center || '—'}</td>
                           <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
                           <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
                           <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
@@ -1065,7 +1065,7 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[100px] truncate" title={order.company || ''}>{order.company || '—'}</td>
+                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[120px] whitespace-normal break-words">{order.company || '—'}</td>
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
@@ -1255,10 +1255,10 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[120px] truncate" title={order.sender || ''}>{order.sender || '—'}</td>
+                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[130px] whitespace-normal break-words">{order.sender || '—'}</td>
                           <td className="px-2 py-1 text-center text-slate-500 font-mono">{order.code || '—'}</td>
-                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[120px] truncate" title={order.customerName || ''}>{order.customerName || '—'}</td>
-                          <td className="px-2 py-1 text-slate-650 max-w-[150px] truncate" title={order.center || ''}>{order.center || '—'}</td>
+                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[130px] whitespace-normal break-words">{order.customerName || '—'}</td>
+                          <td className="px-2 py-1 text-slate-650 min-w-[200px] max-w-[300px] whitespace-normal break-words">{order.center || '—'}</td>
                           <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
                           <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
                           <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
@@ -1333,7 +1333,7 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[100px] truncate" title={order.company || ''}>{order.company || '—'}</td>
+                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[120px] whitespace-normal break-words">{order.company || '—'}</td>
                         </tr>
                       );
                     })}
