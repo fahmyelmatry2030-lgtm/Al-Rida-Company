@@ -73,6 +73,7 @@ function App() {
   const [bulkDispatchFrom, setBulkDispatchFrom] = useState('');
   const [bulkDispatchTo, setBulkDispatchTo] = useState('');
   const [bulkDispatchMerchant, setBulkDispatchMerchant] = useState('');
+  const [isQuickDispatchOpen, setIsQuickDispatchOpen] = useState(false);
 
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
@@ -700,10 +701,21 @@ function App() {
             )}
 
 
-        {activeTab === 'data-entry' && (
-              <button onClick={openAddModal} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
-                <Plus className="w-4 h-4" /> إضافة طلب
-              </button>
+            {activeTab === 'data-entry' && (
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsQuickDispatchOpen(true)} 
+                  className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95"
+                >
+                  🚚 توزيع سريع للمناديب
+                </button>
+                <button 
+                  onClick={openAddModal} 
+                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95"
+                >
+                  <Plus className="w-4 h-4" /> إضافة طلب
+                </button>
+              </div>
             )}
             {activeTab === 'merchants' && (
               <button onClick={() => setActiveMerchantModal({ isOpen: true, data: null })} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95">
@@ -813,123 +825,7 @@ function App() {
               </div>
             </div>
 
-            {/* Quick Dispatch & Distribution Panel */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5 flex flex-col gap-4 print:hidden">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-650 text-base">🚚</div>
-                  <h3 className="font-extrabold text-slate-800 text-sm">لوحة التوزيع السريع للمناديب</h3>
-                </div>
-                {quickDispatchStatus.text && (
-                  <div className={`text-xs font-bold px-3 py-1.5 rounded-lg ${
-                    quickDispatchStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' :
-                    quickDispatchStatus.type === 'error' ? 'bg-red-50 text-red-700 border border-red-250' :
-                    'bg-amber-50 text-amber-700 border border-amber-250'
-                  }`}>
-                    {quickDispatchStatus.text}
-                  </div>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-end">
-                {/* 1. Base Agent & Commission Settings */}
-                <div className="lg:col-span-4 grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">المندوب المستهدف</label>
-                    <select
-                      value={quickDispatchAgent}
-                      onChange={(e) => setQuickDispatchAgent(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-semibold outline-none focus:ring-1 focus:ring-indigo-500"
-                    >
-                      <option value="">اختر المندوب...</option>
-                      {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1">عمولة التوصيل</label>
-                    <input
-                      type="number"
-                      value={quickDispatchCommission}
-                      onChange={(e) => setQuickDispatchCommission(Number(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-bold outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                {/* 2. Single Dispatch Mode (Barcode / Phone) */}
-                <form onSubmit={handleQuickDispatch} className="lg:col-span-4 flex flex-col gap-1.5">
-                  <label className="block text-[10px] font-bold text-slate-400">توزيع فردي سريع (بالباركود / آخر 4 أرقام للهاتف)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="امسح الباركود أو اكتب آخر 4 أرقام..."
-                      value={quickDispatchInput}
-                      onChange={(e) => setQuickDispatchInput(e.target.value)}
-                      className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg transition-colors"
-                    >
-                      تعيين
-                    </button>
-                  </div>
-                </form>
-
-                {/* 3. Bulk Dispatch Modes */}
-                <div className="lg:col-span-4 grid grid-cols-2 gap-3">
-                  {/* By Code Range */}
-                  <div className="flex flex-col gap-1">
-                    <label className="block text-[10px] font-bold text-slate-400 font-sans">من كود إلى كود (جماعي)</label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        placeholder="من"
-                        value={bulkDispatchFrom}
-                        onChange={(e) => setBulkDispatchFrom(e.target.value)}
-                        className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                      <input
-                        type="number"
-                        placeholder="إلى"
-                        value={bulkDispatchTo}
-                        onChange={(e) => setBulkDispatchTo(e.target.value)}
-                        className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleBulkDispatch('range', { from: bulkDispatchFrom, to: bulkDispatchTo })}
-                        className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] px-2 py-2 rounded-lg transition-colors"
-                      >
-                        توزيع
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* By Merchant */}
-                  <div className="flex flex-col gap-1">
-                    <label className="block text-[10px] font-bold text-slate-400">حسب التاجر (جماعي)</label>
-                    <div className="flex gap-1">
-                      <select
-                        value={bulkDispatchMerchant}
-                        onChange={(e) => setBulkDispatchMerchant(e.target.value)}
-                        className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
-                      >
-                        <option value="">اختر التاجر...</option>
-                        {companiesDropdown.filter(c => c !== 'الكل').map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => handleBulkDispatch('merchant', { merchant: bulkDispatchMerchant })}
-                        className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] px-2 py-2 rounded-lg transition-colors"
-                      >
-                        توزيع
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Orders Table — View Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
@@ -1624,6 +1520,167 @@ function App() {
         initialData={activeEmployeeModal.data}
       />
 
+
+
+      {/* Quick Dispatch Modal */}
+      {isQuickDispatchOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm modal-overlay" onClick={() => { setIsQuickDispatchOpen(false); setQuickDispatchStatus({ text: '', type: '' }); }}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-100 animate-slideUp" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50/30 to-indigo-100/10">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🚚</span>
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-sm">لوحة التوزيع السريع للمناديب</h3>
+                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">توزيع الشحنات فردياً أو جماعياً بضغطة زر</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsQuickDispatchOpen(false);
+                  setQuickDispatchStatus({ text: '', type: '' });
+                }} 
+                className="text-slate-400 hover:text-slate-650 p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[70vh] custom-scrollbar">
+              
+              {/* 1. Base Agent & Commission Settings */}
+              <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl flex flex-col gap-3">
+                <h4 className="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider">1. اختيار المندوب والعمولة الأساسية</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">المندوب المستهدف</label>
+                    <select
+                      value={quickDispatchAgent}
+                      onChange={(e) => setQuickDispatchAgent(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-semibold outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="">اختر المندوب...</option>
+                      {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">عمولة التوصيل</label>
+                    <input
+                      type="number"
+                      value={quickDispatchCommission}
+                      onChange={(e) => setQuickDispatchCommission(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-bold outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Message Display */}
+              {quickDispatchStatus.text && (
+                <div className={`text-xs font-bold px-3 py-2 rounded-lg border ${
+                  quickDispatchStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  quickDispatchStatus.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' :
+                  'bg-amber-50 text-amber-700 border-amber-200'
+                } animate-fadeIn`}>
+                  {quickDispatchStatus.text}
+                </div>
+              )}
+
+              {/* 2. Single Dispatch Mode (Barcode / Phone) */}
+              <div className="border border-slate-100 p-4 rounded-xl flex flex-col gap-2.5">
+                <h4 className="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider">2. توزيع فردي سريع (بالمسح أو الهاتف)</h4>
+                <form onSubmit={handleQuickDispatch} className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="امسح الباركود أو اكتب آخر 4 أرقام من الهاتف..."
+                    value={quickDispatchInput}
+                    onChange={(e) => setQuickDispatchInput(e.target.value)}
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg transition-all active:scale-95"
+                  >
+                    تعيين
+                  </button>
+                </form>
+              </div>
+
+              {/* 3. Bulk Dispatch Modes */}
+              <div className="border border-slate-100 p-4 rounded-xl flex flex-col gap-3">
+                <h4 className="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider">3. توزيع جماعي (بنطاق الأكواد أو التاجر)</h4>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {/* By Code Range */}
+                  <div className="flex flex-col gap-2 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                    <label className="block text-[10px] font-bold text-slate-400">نطاق الأكواد (من كود إلى كود)</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        placeholder="من"
+                        value={bulkDispatchFrom}
+                        onChange={(e) => setBulkDispatchFrom(e.target.value)}
+                        className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="إلى"
+                        value={bulkDispatchTo}
+                        onChange={(e) => setBulkDispatchTo(e.target.value)}
+                        className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleBulkDispatch('range', { from: bulkDispatchFrom, to: bulkDispatchTo })}
+                        className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        توزيع
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* By Merchant */}
+                  <div className="flex flex-col gap-2 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                    <label className="block text-[10px] font-bold text-slate-400">حسب التاجر / الراسل</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={bulkDispatchMerchant}
+                        onChange={(e) => setBulkDispatchMerchant(e.target.value)}
+                        className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="">اختر التاجر...</option>
+                        {companiesDropdown.filter(c => c !== 'الكل').map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkDispatch('merchant', { merchant: bulkDispatchMerchant })}
+                        className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        توزيع
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => {
+                  setIsQuickDispatchOpen(false);
+                  setQuickDispatchStatus({ text: '', type: '' });
+                }}
+                className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-5 py-2 rounded-lg transition-all active:scale-95"
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Barcode Scanner */}
       {showScanner && (
