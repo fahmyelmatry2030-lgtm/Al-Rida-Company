@@ -74,6 +74,7 @@ function App() {
   const [bulkDispatchTo, setBulkDispatchTo] = useState('');
   const [bulkDispatchMerchant, setBulkDispatchMerchant] = useState('');
   const [isQuickDispatchOpen, setIsQuickDispatchOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
@@ -570,8 +571,17 @@ function App() {
   };
 
   const NavButton = ({ id, icon: Icon, label }) => (
-    <button onClick={() => setActiveTab(id)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${activeTab === id ? 'bg-white/15 text-white shadow-lg shadow-white/5 backdrop-blur-sm border border-white/10' : 'text-white/60 hover:text-white/90 hover:bg-white/5'}`}>
-      <Icon className="w-5 h-5" /> <span className="font-medium">{label}</span>
+    <button 
+      onClick={() => setActiveTab(id)} 
+      className={`flex items-center rounded-xl transition-all duration-200 ${
+        isSidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
+      } ${
+        activeTab === id ? 'bg-white/15 text-white shadow-lg shadow-white/5 backdrop-blur-sm border border-white/10' : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+      }`}
+      title={label}
+    >
+      <Icon className="w-5 h-5" /> 
+      {!isSidebarCollapsed && <span className="font-medium">{label}</span>}
     </button>
   );
 
@@ -620,15 +630,26 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/30 flex font-sans" dir="rtl">
 
       {/* Sidebar */}
-      <aside className="w-[260px] bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col shadow-2xl z-20 sticky top-0 h-screen print:hidden overflow-y-auto custom-scrollbar shrink-0">
-        <div className="p-5 flex items-center gap-3 border-b border-white/10 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Truck className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">شركة الرضا</h1>
-            <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">Shipping Management</span>
-          </div>
+      <aside className={`bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col shadow-2xl z-20 sticky top-0 h-screen print:hidden overflow-y-auto custom-scrollbar shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'w-[72px]' : 'w-[260px]'}`}>
+        <div className={`p-4 flex items-center justify-between border-b border-white/10 shrink-0 ${isSidebarCollapsed ? 'flex-col gap-3' : 'flex-row'}`}>
+          {!isSidebarCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <Truck className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight">شركة الرضا</h1>
+                <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">Shipping Management</span>
+              </div>
+            </div>
+          )}
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors mx-auto"
+            title={isSidebarCollapsed ? "توسيع القائمة" : "طي القائمة"}
+          >
+            {isSidebarCollapsed ? <ChevronDown className="-rotate-90 w-5 h-5" /> : <ChevronDown className="rotate-90 w-5 h-5" />}
+          </button>
         </div>
         <nav className="flex-1 p-3 flex flex-col gap-1">
           {!isAgent && <NavButton id="dashboard" icon={TrendingUp} label="لوحة التحكم" />}
@@ -643,33 +664,62 @@ function App() {
           <div className="my-2 border-t border-white/5"></div>
           {isAdmin && <NavButton id="users" icon={UserCog} label="المستخدمون" />}
           <div className="my-2 border-t border-white/5"></div>
-          <button onClick={() => setShowScanner(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5">
-            <ScanLine className="w-5 h-5" /> <span className="font-medium">ماسح الباركود</span>
+          <button 
+            onClick={() => setShowScanner(true)} 
+            className={`flex items-center rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5 ${
+              isSidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
+            }`}
+            title="ماسح الباركود"
+          >
+            <ScanLine className="w-5 h-5" /> 
+            {!isSidebarCollapsed && <span className="font-medium">ماسح الباركود</span>}
           </button>
-          <button onClick={() => setShowTracking(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5">
-            <Eye className="w-5 h-5" /> <span className="font-medium">تتبع الشحنات</span>
+          <button 
+            onClick={() => setShowTracking(true)} 
+            className={`flex items-center rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5 ${
+              isSidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
+            }`}
+            title="تتبع الشحنات"
+          >
+            <Eye className="w-5 h-5" /> 
+            {!isSidebarCollapsed && <span className="font-medium">تتبع الشحنات</span>}
           </button>
         </nav>
         <div className="p-4 border-t border-white/5 shrink-0 flex flex-col gap-3">
           {!isInstalled && installPrompt && (
             <button onClick={handleInstall} className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20 text-sm w-full">
-              <MonitorSmartphone className="w-4 h-4" /> تثبيت التطبيق
+              <MonitorSmartphone className="w-4 h-4" /> 
+              {!isSidebarCollapsed && 'تثبيت التطبيق'}
             </button>
           )}
           {isInstalled && (
-            <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-medium">
-              <CheckCircle className="w-3 h-3" /> تم تثبيت التطبيق
+            <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-medium" title="تم تثبيت التطبيق">
+              <CheckCircle className="w-3 h-3" /> 
+              {!isSidebarCollapsed && 'تم تثبيت التطبيق'}
             </div>
           )}
-          <div className="bg-white/5 rounded-xl p-3 mb-2">
-            <p className="text-white/80 font-bold text-sm">{currentUser?.name}</p>
-            <p className="text-white/40 text-xs mt-0.5">{currentUser?.role === 'admin' ? '👑 مدير' : currentUser?.role === 'secretary' ? '📋 سكرتير' : '🚚 مندوب'}</p>
-          </div>
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs font-bold py-2 rounded-xl transition-colors">
-            خروج من الحساب
+          {!isSidebarCollapsed ? (
+            <div className="bg-white/5 rounded-xl p-3 mb-1">
+              <p className="text-white/80 font-bold text-sm truncate">{currentUser?.name}</p>
+              <p className="text-white/40 text-xs mt-0.5">{currentUser?.role === 'admin' ? '👑 مدير' : currentUser?.role === 'secretary' ? '📋 سكرتير' : '🚚 مندوب'}</p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center p-2 mb-1 text-white/60 text-lg" title={`${currentUser?.name} (${currentUser?.role === 'admin' ? 'مدير' : currentUser?.role === 'secretary' ? 'سكرتير' : 'مندوب'})`}>
+              👤
+            </div>
+          )}
+          <button 
+            onClick={handleLogout} 
+            className={`w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs font-bold py-2 rounded-xl transition-colors ${
+              isSidebarCollapsed ? 'p-2' : ''
+            }`}
+            title="خروج من الحساب"
+          >
+            <X className="w-4 h-4" /> 
+            {!isSidebarCollapsed && 'خروج من الحساب'}
           </button>
-          <p className="text-center text-[10px] text-white/20 mt-1">البيانات محفوظة على السيرفر ☁️</p>
         </div>
+        <p className="text-center text-[10px] text-white/20 mt-1">البيانات محفوظة على السيرفر ☁️</p>
       </aside>
 
       {/* Main Content */}

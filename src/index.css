@@ -272,3 +272,23 @@ table tbody select[class*="font-extrabold"] {
   font-weight: 800 !important;
 }
 
+/* Compact Table Layout & Styling Overrides */
+table th, table td {
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+
+table tbody td {
+  font-size: 12.5px !important;
+}
+
+table tbody input[type="text"],
+table tbody input[type="number"],
+table tbody select {
+  font-size: 12.5px !important;
+  padding: 3px 5px !important;
+}
+
+
