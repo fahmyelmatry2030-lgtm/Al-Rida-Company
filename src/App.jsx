@@ -673,7 +673,7 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 flex flex-col gap-5 max-h-screen overflow-y-auto w-full print:p-0 print:h-auto print:overflow-visible custom-scrollbar">
+      <main className="flex-1 p-3 px-4 flex flex-col gap-4 max-h-screen overflow-y-auto w-full print:p-0 print:h-auto print:overflow-visible custom-scrollbar">
         
         {/* Top Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
@@ -833,27 +833,27 @@ function App() {
                 <table className="w-full text-sm text-right print:text-xs">
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-550 font-bold sticky top-0 z-10">
                     <tr className="border-b border-slate-200 whitespace-nowrap">
-                      <th className="px-3 py-3.5 text-center w-10">#</th>
-                      <th className="px-3 py-3.5 text-center w-8 print:hidden">
-                        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                      <th className="px-1 py-2 text-center w-6">#</th>
+                      <th className="px-1 py-2 text-center w-6 print:hidden">
+                        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3 h-3 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                       </th>
-                      <th className="px-3 py-3.5 text-center min-w-[90px]">المراجعه</th>
-                      <th className="px-3 py-3.5 min-w-[150px]">الراسل</th>
-                      <th className="px-3 py-3.5 text-center min-w-[90px]">ك</th>
-                      <th className="px-3 py-3.5 min-w-[160px]">الاسم</th>
-                      <th className="px-3 py-3.5 min-w-[280px]">العنوان</th>
-                      <th className="px-3 py-3.5 text-center min-w-[130px]">الرقم</th>
-                      <th className="px-3 py-3.5 text-center min-w-[70px]">العدد</th>
-                      <th className="px-3 py-3.5 text-center min-w-[110px]">الاجمالى</th>
-                      <th className="px-3 py-3.5 min-w-[150px]">المناديب</th>
-                      <th className="px-3 py-3.5 text-center min-w-[140px]">الموقف</th>
-                      <th className="px-3 py-3.5 text-center min-w-[110px]">المحصل</th>
-                      <th className="px-3 py-3.5 text-center min-w-[90px]">العموله</th>
-                      <th className="px-3 py-3.5 text-center min-w-[110px] font-bold text-indigo-600">الصافى</th>
-                      <th className="px-3 py-3.5 text-center min-w-[100px]">المرتجع</th>
-                      <th className="px-3 py-3.5 min-w-[200px]">ملاحظات</th>
-                      <th className="px-3 py-3.5 min-w-[150px]">الشركات</th>
-                      <th className="px-3 py-3.5 text-center w-24 print:hidden">إجراءات</th>
+                      <th className="px-1 py-2 text-center min-w-[70px] max-w-[80px]">المراجعه</th>
+                      <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الراسل</th>
+                      <th className="px-1 py-2 text-center min-w-[50px] max-w-[60px]">ك</th>
+                      <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الاسم</th>
+                      <th className="px-1.5 py-2 min-w-[160px] max-w-[200px] text-right">العنوان</th>
+                      <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الرقم</th>
+                      <th className="px-1 py-2 text-center min-w-[45px] max-w-[55px]">العدد</th>
+                      <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">الاجمالى</th>
+                      <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
+                      <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
+                      <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
+                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">العموله</th>
+                      <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
+                      <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
+                      <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
+                      <th className="px-1.5 py-2 min-w-[90px] max-w-[110px] text-right">الشركات</th>
+                      <th className="px-1 py-2 text-center w-14 print:hidden">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1103,26 +1103,26 @@ function App() {
                 <table className="w-full text-sm text-right print:text-xs">
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-550 font-bold sticky top-0 z-10">
                     <tr className="border-b border-slate-200 whitespace-nowrap">
-                      <th className="px-3 py-3.5 text-center w-10">#</th>
-                      <th className="px-3 py-3.5 text-center w-8 print:hidden">
-                        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                      <th className="px-1 py-2 text-center w-6">#</th>
+                      <th className="px-1 py-2 text-center w-6 print:hidden">
+                        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3 h-3 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                       </th>
-                      <th className="px-3 py-3.5 text-center min-w-[90px]">المراجعه</th>
-                      <th className="px-3 py-3.5 min-w-[150px]">الراسل</th>
-                      <th className="px-3 py-3.5 text-center min-w-[90px]">ك</th>
-                      <th className="px-3 py-3.5 min-w-[160px]">الاسم</th>
-                      <th className="px-3 py-3.5 min-w-[280px]">العنوان</th>
-                      <th className="px-3 py-3.5 text-center min-w-[130px]">الرقم</th>
-                      <th className="px-3 py-3.5 text-center min-w-[70px]">العدد</th>
-                      <th className="px-3 py-3.5 text-center min-w-[110px]">الاجمالى</th>
-                      <th className="px-3 py-3.5 min-w-[150px]">المناديب</th>
-                      <th className="px-3 py-3.5 text-center min-w-[140px]">الموقف</th>
-                      <th className="px-3 py-3.5 text-center min-w-[110px]">المحصل</th>
-                      <th className="px-3 py-3.5 text-center min-w-[90px]">العموله</th>
-                      <th className="px-3 py-3.5 text-center min-w-[110px] font-bold text-indigo-600">الصافى</th>
-                      <th className="px-3 py-3.5 text-center min-w-[100px]">المرتجع</th>
-                      <th className="px-3 py-3.5 min-w-[200px]">ملاحظات</th>
-                      <th className="px-3 py-3.5 min-w-[150px]">الشركات</th>
+                      <th className="px-1 py-2 text-center min-w-[70px] max-w-[80px]">المراجعه</th>
+                      <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الراسل</th>
+                      <th className="px-1 py-2 text-center min-w-[50px] max-w-[60px]">ك</th>
+                      <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الاسم</th>
+                      <th className="px-1.5 py-2 min-w-[160px] max-w-[200px] text-right">العنوان</th>
+                      <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الرقم</th>
+                      <th className="px-1 py-2 text-center min-w-[45px] max-w-[55px]">العدد</th>
+                      <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">الاجمالى</th>
+                      <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
+                      <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
+                      <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
+                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">العموله</th>
+                      <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
+                      <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
+                      <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
+                      <th className="px-1.5 py-2 min-w-[90px] max-w-[110px] text-right">الشركات</th>
                     </tr>
                   </thead>
                   <tbody>
