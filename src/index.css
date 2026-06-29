@@ -227,3 +227,48 @@
   body { background: white !important; }
   .stat-card, .glass-card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
 }
+
+/* --- Premium Inline Table Editing Styles --- */
+table tbody input[type="text"],
+table tbody input[type="number"],
+table tbody select {
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 4px 8px !important;
+  transition: all 120ms ease-in-out !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  color: #334155 !important; /* text-slate-700 */
+}
+
+/* Hover State */
+table tbody input[type="text"]:hover,
+table tbody input[type="number"]:hover,
+table tbody select:hover {
+  border-color: rgba(203, 213, 225, 0.8) !important; /* slate-300 */
+  background-color: rgba(241, 245, 249, 0.4) !important; /* slate-100/40 */
+}
+
+/* Active Focus State */
+table tbody input[type="text"]:focus,
+table tbody input[type="number"]:focus,
+table tbody select:focus {
+  background-color: #ffffff !important;
+  border-color: #6366f1 !important; /* indigo-500 */
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12) !important;
+  cursor: text !important;
+  font-weight: 600 !important;
+  color: #0f172a !important; /* slate-900 */
+}
+
+/* Status dropdown badges styling override */
+table tbody select[class*="rounded-full"] {
+  border-radius: 9999px !important;
+}
+table tbody select[class*="font-extrabold"] {
+  font-weight: 800 !important;
+}
+
