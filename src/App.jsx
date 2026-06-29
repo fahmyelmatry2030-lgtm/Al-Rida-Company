@@ -66,6 +66,13 @@ function App() {
     try { return JSON.parse(sessionStorage.getItem('currentUser')); } catch { return null; }
   });
   const [showScanner, setShowScanner] = useState(false);
+  const [quickDispatchAgent, setQuickDispatchAgent] = useState('');
+  const [quickDispatchCommission, setQuickDispatchCommission] = useState(20);
+  const [quickDispatchInput, setQuickDispatchInput] = useState('');
+  const [quickDispatchStatus, setQuickDispatchStatus] = useState({ text: '', type: '' });
+  const [bulkDispatchFrom, setBulkDispatchFrom] = useState('');
+  const [bulkDispatchTo, setBulkDispatchTo] = useState('');
+  const [bulkDispatchMerchant, setBulkDispatchMerchant] = useState('');
 
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
@@ -200,6 +207,99 @@ function App() {
         await deleteDoc(doc(db, 'orders', id));
       } catch(err) {
         alert('خطأ: ' + err.message);
+      }
+    }
+  };
+
+  // --- Dispatching / Distributing Logic ---
+  const handleQuickDispatch = async (e) => {
+    if (e) e.preventDefault();
+    setQuickDispatchStatus({ text: '', type: '' });
+    
+    if (!quickDispatchAgent) {
+      setQuickDispatchStatus({ text: 'يرجى اختيار المندوب أولاً.', type: 'error' });
+      return;
+    }
+    
+    const queryStr = quickDispatchInput.trim();
+    if (!queryStr) return;
+    
+    let matches = orders.filter(o => !o.settled && (
+      (o.code && o.code.toLowerCase() === queryStr.toLowerCase()) ||
+      (o.phone && o.phone.endsWith(queryStr))
+    ));
+    
+    if (matches.length === 0) {
+      setQuickDispatchStatus({ text: `لم يتم العثور على أي شحنة غير مقفلة تطابق الكود أو رقم الهاتف: "${queryStr}"`, type: 'error' });
+    } else if (matches.length === 1) {
+      const orderToUpdate = matches[0];
+      try {
+        await setDoc(doc(db, 'orders', orderToUpdate.id), {
+          ...orderToUpdate,
+          agent: quickDispatchAgent,
+          commission: Number(quickDispatchCommission) || 0
+        });
+        setQuickDispatchStatus({ text: `تم إسناد الشحنة [${orderToUpdate.customerName}] كود (${orderToUpdate.code}) للمندوب (${quickDispatchAgent}) بنجاح ✓`, type: 'success' });
+        setQuickDispatchInput(''); // Clear input for next scan/type
+      } catch (err) {
+        setQuickDispatchStatus({ text: 'خطأ في التحديث: ' + err.message, type: 'error' });
+      }
+    } else {
+      setQuickDispatchStatus({ 
+        text: `تم العثور على أكثر من شحنة تطابق "${queryStr}". يرجى التوزيع يدوياً من الجدول أو تحديد أكواد دقيقة.`, 
+        type: 'warning' 
+      });
+    }
+  };
+
+  const handleBulkDispatch = async (type, payload) => {
+    setQuickDispatchStatus({ text: '', type: '' });
+    if (!quickDispatchAgent) {
+      setQuickDispatchStatus({ text: 'يرجى اختيار المندوب أولاً.', type: 'error' });
+      return;
+    }
+
+    let targets = [];
+    if (type === 'merchant') {
+      const merchantName = payload.merchant;
+      if (!merchantName) return;
+      targets = orders.filter(o => !o.settled && o.company === merchantName);
+    } else if (type === 'range') {
+      const fromNum = Number(payload.from);
+      const toNum = Number(payload.to);
+      if (isNaN(fromNum) || isNaN(toNum)) {
+        return setQuickDispatchStatus({ text: 'يرجى إدخال أرقام صحيحة لنطاق الأكواد.', type: 'error' });
+      }
+      targets = orders.filter(o => {
+        if (o.settled) return false;
+        const codeNum = Number(o.code);
+        return !isNaN(codeNum) && codeNum >= fromNum && codeNum <= toNum;
+      });
+    }
+
+    if (targets.length === 0) {
+      setQuickDispatchStatus({ text: 'لم يتم العثور على أي شحنات غير مقفلة تطابق الفلتر المحدد.', type: 'warning' });
+      return;
+    }
+
+    if (window.confirm(`هل أنت متأكد من إسناد عدد ${targets.length} شحنة للمندوب "${quickDispatchAgent}" بعمولة ${quickDispatchCommission} ج.م؟`)) {
+      try {
+        let count = 0;
+        for (const o of targets) {
+          await setDoc(doc(db, 'orders', o.id), {
+            ...o,
+            agent: quickDispatchAgent,
+            commission: Number(quickDispatchCommission) || 0
+          });
+          count++;
+        }
+        setQuickDispatchStatus({ text: `تم إسناد عدد ${count} شحنة بنجاح للمندوب ${quickDispatchAgent} ✓`, type: 'success' });
+        // Clear bulk fields
+        setBulkDispatchFrom('');
+        setBulkDispatchTo('');
+        setBulkDispatchMerchant('');
+      } catch (err) {
+        setQuickDispatchStatus({ text: 'خطأ أثناء التوزيع الجماعي: ' + err.message, type: 'error' });
       }
     }
   };
@@ -707,6 +807,124 @@ function App() {
               </div>
             </div>
 
+            {/* Quick Dispatch & Distribution Panel */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5 flex flex-col gap-4 print:hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-650 text-base">🚚</div>
+                  <h3 className="font-extrabold text-slate-800 text-sm">لوحة التوزيع السريع للمناديب</h3>
+                </div>
+                {quickDispatchStatus.text && (
+                  <div className={`text-xs font-bold px-3 py-1.5 rounded-lg ${
+                    quickDispatchStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' :
+                    quickDispatchStatus.type === 'error' ? 'bg-red-50 text-red-700 border border-red-250' :
+                    'bg-amber-50 text-amber-700 border border-amber-250'
+                  }`}>
+                    {quickDispatchStatus.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-end">
+                {/* 1. Base Agent & Commission Settings */}
+                <div className="lg:col-span-4 grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">المندوب المستهدف</label>
+                    <select
+                      value={quickDispatchAgent}
+                      onChange={(e) => setQuickDispatchAgent(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-semibold outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="">اختر المندوب...</option>
+                      {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">عمولة التوصيل</label>
+                    <input
+                      type="number"
+                      value={quickDispatchCommission}
+                      onChange={(e) => setQuickDispatchCommission(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-bold outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Single Dispatch Mode (Barcode / Phone) */}
+                <form onSubmit={handleQuickDispatch} className="lg:col-span-4 flex flex-col gap-1.5">
+                  <label className="block text-[10px] font-bold text-slate-400">توزيع فردي سريع (بالباركود / آخر 4 أرقام للهاتف)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="امسح الباركود أو اكتب آخر 4 أرقام..."
+                      value={quickDispatchInput}
+                      onChange={(e) => setQuickDispatchInput(e.target.value)}
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg transition-colors"
+                    >
+                      تعيين
+                    </button>
+                  </div>
+                </form>
+
+                {/* 3. Bulk Dispatch Modes */}
+                <div className="lg:col-span-4 grid grid-cols-2 gap-3">
+                  {/* By Code Range */}
+                  <div className="flex flex-col gap-1">
+                    <label className="block text-[10px] font-bold text-slate-400 font-sans">من كود إلى كود (جماعي)</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="من"
+                        value={bulkDispatchFrom}
+                        onChange={(e) => setBulkDispatchFrom(e.target.value)}
+                        className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="إلى"
+                        value={bulkDispatchTo}
+                        onChange={(e) => setBulkDispatchTo(e.target.value)}
+                        className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleBulkDispatch('range', { from: bulkDispatchFrom, to: bulkDispatchTo })}
+                        className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] px-2 py-2 rounded-lg transition-colors"
+                      >
+                        توزيع
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* By Merchant */}
+                  <div className="flex flex-col gap-1">
+                    <label className="block text-[10px] font-bold text-slate-400">حسب التاجر (جماعي)</label>
+                    <div className="flex gap-1">
+                      <select
+                        value={bulkDispatchMerchant}
+                        onChange={(e) => setBulkDispatchMerchant(e.target.value)}
+                        className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="">اختر التاجر...</option>
+                        {companiesDropdown.filter(c => c !== 'الكل').map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkDispatch('merchant', { merchant: bulkDispatchMerchant })}
+                        className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] px-2 py-2 rounded-lg transition-colors"
+                      >
+                        توزيع
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Orders Table — View Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
               <div className="overflow-x-auto flex-1 custom-scrollbar">
@@ -769,10 +987,10 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-slate-750 font-semibold">{order.sender || '—'}</td>
-                          <td className="px-2 py-1 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
-                          <td className="px-2 py-1 text-slate-800 font-bold">{order.customerName || '—'}</td>
-                          <td className="px-2 py-1 text-slate-650">{order.center || '—'}</td>
+                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[120px] truncate" title={order.sender || ''}>{order.sender || '—'}</td>
+                          <td className="px-2 py-1 text-center text-slate-500 font-mono">{order.code || '—'}</td>
+                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[120px] truncate" title={order.customerName || ''}>{order.customerName || '—'}</td>
+                          <td className="px-2 py-1 text-slate-650 max-w-[150px] truncate" title={order.center || ''}>{order.center || '—'}</td>
                           <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
                           <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
                           <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
@@ -847,7 +1065,7 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-indigo-700 font-bold">{order.company || '—'}</td>
+                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[100px] truncate" title={order.company || ''}>{order.company || '—'}</td>
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
@@ -1037,10 +1255,10 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-slate-750 font-semibold">{order.sender || '—'}</td>
-                          <td className="px-2 py-1 text-center text-slate-500 font-mono">#{order.code || '—'}</td>
-                          <td className="px-2 py-1 text-slate-800 font-bold">{order.customerName || '—'}</td>
-                          <td className="px-2 py-1 text-slate-650">{order.center || '—'}</td>
+                          <td className="px-2 py-1 text-slate-750 font-semibold max-w-[120px] truncate" title={order.sender || ''}>{order.sender || '—'}</td>
+                          <td className="px-2 py-1 text-center text-slate-500 font-mono">{order.code || '—'}</td>
+                          <td className="px-2 py-1 text-slate-800 font-bold max-w-[120px] truncate" title={order.customerName || ''}>{order.customerName || '—'}</td>
+                          <td className="px-2 py-1 text-slate-650 max-w-[150px] truncate" title={order.center || ''}>{order.center || '—'}</td>
                           <td className="px-2 py-1 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
                           <td className="px-2 py-1 text-center text-slate-650 font-bold">{order.count || 1}</td>
                           <td className="px-2 py-1 text-center font-bold text-slate-700">{Number(order.total || 0).toLocaleString()}</td>
@@ -1115,7 +1333,7 @@ function App() {
                               className="border border-slate-200/60 rounded px-1.5 py-0.5 text-xs text-slate-700 w-36 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-2 py-1 text-indigo-700 font-bold">{order.company || '—'}</td>
+                          <td className="px-2 py-1 text-indigo-700 font-bold max-w-[100px] truncate" title={order.company || ''}>{order.company || '—'}</td>
                         </tr>
                       );
                     })}
