@@ -984,21 +984,21 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-slate-750 font-semibold whitespace-normal break-words max-w-[150px]">{order.sender || '—'}</td>
-                          <td className="px-3 py-2 text-center text-slate-500 font-mono">{order.code || '—'}</td>
-                          <td className="px-3 py-2 text-slate-800 font-bold whitespace-normal break-words max-w-[160px]">{order.customerName || '—'}</td>
-                          <td className="px-3 py-2 text-slate-700 whitespace-normal break-words min-w-[280px]">{order.center || '—'}</td>
-                          <td className="px-3 py-2 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-3 py-2 text-center text-slate-650 font-bold">{order.count || 1}</td>
-                          <td className="px-3 py-2 text-center font-bold text-slate-800">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-slate-800 font-semibold whitespace-normal break-words max-w-[150px] text-[14px]">{order.sender || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-600 font-bold font-mono text-[14px]">{order.code || '—'}</td>
+                          <td className="px-3 py-2 text-slate-900 font-extrabold whitespace-normal break-words max-w-[160px] text-[15px]">{order.customerName || '—'}</td>
+                          <td className="px-3 py-2 text-slate-700 whitespace-normal break-words min-w-[280px] text-[14px]">{order.center || '—'}</td>
+                          <td className="px-3 py-2 text-center font-mono font-semibold text-slate-600 text-[14px]" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-700 font-extrabold text-[14px]">{order.count || 1}</td>
+                          <td className="px-3 py-2 text-center font-black text-slate-850 text-[15px]">{Number(order.total || 0).toLocaleString()}</td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <select 
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-36"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-40"
                             >
                               <option value="">اختر المندوب...</option>
                               {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
@@ -1008,8 +1008,8 @@ function App() {
                             <select 
                               value={order.status || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
-                              className={`border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 w-32 text-center ${
-                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-200'
+                              className={`border rounded px-2 py-1 text-sm font-extrabold outline-none focus:ring-1 focus:ring-indigo-500 w-36 text-center ${
+                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-205'
                               }`}
                             >
                               <option value="">اختر الحالة...</option>
@@ -1025,7 +1025,7 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-800 font-extrabold w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-extrabold text-slate-800 w-28 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
@@ -1037,10 +1037,10 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-center font-black text-indigo-750 text-[15px]">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-returns-' + (order.returns || '')}
@@ -1050,7 +1050,7 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-28 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
@@ -1062,10 +1062,10 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-44 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-750 w-56 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-indigo-700 font-bold whitespace-normal break-words max-w-[140px]">{order.company || '—'}</td>
+                          <td className="px-3 py-2 text-indigo-750 font-extrabold whitespace-normal break-words max-w-[140px] text-[14px]">{order.company || '—'}</td>
                           <td className="px-2 py-2.5 text-center print:hidden" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setWaybillOrder(order)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="طباعة بوليصة">
@@ -1252,21 +1252,21 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-800 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-slate-750 font-semibold whitespace-normal break-words max-w-[150px]">{order.sender || '—'}</td>
-                          <td className="px-3 py-2 text-center text-slate-500 font-mono">{order.code || '—'}</td>
-                          <td className="px-3 py-2 text-slate-800 font-bold whitespace-normal break-words max-w-[160px]">{order.customerName || '—'}</td>
-                          <td className="px-3 py-2 text-slate-700 whitespace-normal break-words min-w-[280px]">{order.center || '—'}</td>
-                          <td className="px-3 py-2 text-center font-mono text-slate-500" dir="ltr">{order.phone || '—'}</td>
-                          <td className="px-3 py-2 text-center text-slate-650 font-bold">{order.count || 1}</td>
-                          <td className="px-3 py-2 text-center font-bold text-slate-800">{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-slate-800 font-semibold whitespace-normal break-words max-w-[150px] text-[14px]">{order.sender || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-600 font-bold font-mono text-[14px]">{order.code || '—'}</td>
+                          <td className="px-3 py-2 text-slate-900 font-extrabold whitespace-normal break-words max-w-[160px] text-[15px]">{order.customerName || '—'}</td>
+                          <td className="px-3 py-2 text-slate-700 whitespace-normal break-words min-w-[280px] text-[14px]">{order.center || '—'}</td>
+                          <td className="px-3 py-2 text-center font-mono font-semibold text-slate-600 text-[14px]" dir="ltr">{order.phone || '—'}</td>
+                          <td className="px-3 py-2 text-center text-slate-700 font-extrabold text-[14px]">{order.count || 1}</td>
+                          <td className="px-3 py-2 text-center font-black text-slate-855 text-[15px]">{Number(order.total || 0).toLocaleString()}</td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <select 
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-36"
+                              className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-40"
                             >
                               <option value="">اختر المندوب...</option>
                               {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
@@ -1276,8 +1276,8 @@ function App() {
                             <select 
                               value={order.status || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
-                              className={`border rounded px-2 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-indigo-500 w-32 text-center ${
-                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-200'
+                              className={`border rounded px-2 py-1 text-sm font-extrabold outline-none focus:ring-1 focus:ring-indigo-500 w-36 text-center ${
+                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-205'
                               }`}
                             >
                               <option value="">اختر الحالة...</option>
@@ -1293,7 +1293,7 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-800 font-extrabold w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-255 rounded px-2 py-1 text-sm font-extrabold text-slate-800 w-28 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
@@ -1305,10 +1305,10 @@ function App() {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-20 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-center font-extrabold text-indigo-750">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-returns-' + (order.returns || '')}
@@ -1318,7 +1318,7 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-24 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-28 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
@@ -1330,10 +1330,10 @@ function App() {
                                 const val = e.target.value.trim();
                                 if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
                               }}
-                              className="border border-slate-200/80 rounded px-2 py-1 text-xs text-slate-700 w-44 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-755 w-56 outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-indigo-700 font-bold whitespace-normal break-words max-w-[140px]">{order.company || '—'}</td>
+                          <td className="px-3 py-2 text-indigo-750 font-extrabold whitespace-normal break-words max-w-[140px] text-[14px]">{order.company || '—'}</td>
                         </tr>
                       );
                     })}
