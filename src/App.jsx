@@ -1239,9 +1239,15 @@ function App() {
               {/* Sheet Tabs */}
               <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden" dir="ltr">
                 {dateTabs.map(dateStr => {
-                  // Format YYYY-MM-DD to DD/MM
+                  // Format YYYY-MM-DD to "Weekday DD/MM"
                   const parts = dateStr.split('-');
-                  const displayDate = parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateStr;
+                  let displayDate = dateStr;
+                  if (parts.length === 3) {
+                    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const weekday = dateObj.toLocaleDateString('ar-EG', { weekday: 'long' });
+                    displayDate = `${weekday} ${parts[2]}/${parts[1]}`;
+                  }
+                  
                   return (
                     <button
                       key={dateStr}
