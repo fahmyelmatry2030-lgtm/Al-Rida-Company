@@ -45,7 +45,7 @@ function App() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showSettled, setShowSettled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeSheetName, setActiveSheetName] = useState('شيت 1');
+  const [activeDateTab, setActiveDateTab] = useState(today());
   const fileInputRef = useRef(null);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -112,10 +112,10 @@ function App() {
   const [expenses, setExpenses] = useState([]);
   const [salaryPayments, setSalaryPayments] = useState([]);
 
-  const sheetsList = useMemo(() => {
-    const sheets = [...new Set(orders.map(o => o.sheetName).filter(Boolean))];
-    if (!sheets.includes('شيت 1')) sheets.unshift('شيت 1');
-    return sheets;
+  const dateTabs = useMemo(() => {
+    const dates = [...new Set(orders.map(o => o.date).filter(Boolean))].sort((a, b) => new Date(a) - new Date(b));
+    if (!dates.includes(today())) dates.push(today());
+    return dates;
   }, [orders]);
 
 
@@ -195,7 +195,7 @@ function App() {
 
   const openAddModal = () => {
     setEditingOrder({
-      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false, archived: false, sheetName: activeSheetName
+      id: Math.random().toString(36).substr(2, 9), date: activeDateTab, sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false, archived: false
     });
     setIsModalOpen(true);
   };
@@ -378,10 +378,10 @@ function App() {
       result = result.filter(o => !o.settled);
     }
     if (activeTab === 'data-entry') {
-      result = result.filter(o => !o.settled && (o.sheetName || 'شيت 1') === activeSheetName);
+      result = result.filter(o => !o.settled && o.date === activeDateTab);
     }
     if (activeTab === 'archive') {
-      result = result.filter(o => !o.settled && (o.sheetName || 'شيت 1') !== activeSheetName);
+      result = result.filter(o => !o.settled && o.date !== activeDateTab);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -482,8 +482,7 @@ function App() {
           notes: row[14] || '',
           company: row[1] || '', // Guessing company is sender
           settled: false,
-          archived: false,
-          sheetName: activeSheetName
+          archived: false
         };
         batch.set(doc(db, 'orders', newId), orderDoc);
         count++;
@@ -1238,29 +1237,21 @@ function App() {
               </div>
 
               {/* Sheet Tabs */}
-              <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden">
-                <button
-                  onClick={() => {
-                    const newName = prompt('اسم الشيت الجديد:');
-                    if (newName && newName.trim() !== '') {
-                      setActiveSheetName(newName.trim());
-                    }
-                  }}
-                  className="flex items-center justify-center min-w-[32px] h-8 bg-white border border-slate-300 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors shadow-sm"
-                  title="إضافة شيت جديد"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-                <div className="w-[1px] h-5 bg-slate-300 mx-1"></div>
-                {sheetsList.map(sheet => (
-                  <button
-                    key={sheet}
-                    onClick={() => setActiveSheetName(sheet)}
-                    className={`px-4 py-1.5 rounded-t-lg text-sm font-semibold transition-all whitespace-nowrap ${activeSheetName === sheet ? 'bg-white text-indigo-700 border-t-2 border-indigo-500 shadow-sm' : 'text-slate-600 hover:bg-slate-200/50'}`}
-                  >
-                    {sheet}
-                  </button>
-                ))}
+              <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden" dir="ltr">
+                {dateTabs.map(dateStr => {
+                  // Format YYYY-MM-DD to DD/MM
+                  const parts = dateStr.split('-');
+                  const displayDate = parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateStr;
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => setActiveDateTab(dateStr)}
+                      className={`px-5 py-2 rounded-t-lg text-sm font-bold transition-all whitespace-nowrap ${activeDateTab === dateStr ? 'bg-white text-indigo-700 border-t-4 border-indigo-500 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60 border-t-4 border-transparent'}`}
+                    >
+                      {displayDate} {dateStr === today() && <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">اليوم</span>}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Pagination Controls */}
