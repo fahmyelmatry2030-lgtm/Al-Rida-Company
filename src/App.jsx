@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, WalletCards, Printer, Download, Upload, Trash2, Search, Store, UserCircle, Receipt, CheckCircle, Lock, Calendar, MonitorSmartphone, Eye, Edit3, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight, X } from 'lucide-react';
+import { Package, Users, Truck, FileSpreadsheet, Plus, Filter, ChevronDown, WalletCards, Printer, Download, Upload, Trash2, Search, Store, UserCircle, Receipt, CheckCircle, Lock, Calendar, MonitorSmartphone, Eye, Edit3, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight, X, Archive } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import OrderModal from './OrderModal';
@@ -12,7 +12,7 @@ import BarcodeScanner from './BarcodeScanner';
 import { setupDefaultAdmin } from './setupUsers';
 import { UserCog, ScanLine } from 'lucide-react';
 import { db } from './firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
 import SalaryPage from './SalaryPage';
 
@@ -188,7 +188,7 @@ function App() {
 
   const openAddModal = () => {
     setEditingOrder({
-      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false
+      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false, archived: false
     });
     setIsModalOpen(true);
   };
@@ -216,6 +216,26 @@ function App() {
       } catch(err) {
         alert('خطأ: ' + err.message);
       }
+    }
+  };
+
+  const handleArchiveOrders = async (ordersToArchive) => {
+    if (!window.confirm(`هل أنت متأكد من ترحيل ${ordersToArchive.length} طلب إلى سجل الشحنات؟`)) return;
+    try {
+      let batch = writeBatch(db);
+      let count = 0;
+      for (const order of ordersToArchive) {
+        batch.update(doc(db, 'orders', order.id), { archived: true });
+        count++;
+        if (count === 500) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+      if (count > 0) await batch.commit();
+    } catch(err) {
+      alert('خطأ أثناء الترحيل: ' + err.message);
     }
   };
 
@@ -351,7 +371,10 @@ function App() {
       result = result.filter(o => !o.settled);
     }
     if (activeTab === 'data-entry') {
-      result = result.filter(o => !o.settled);
+      result = result.filter(o => !o.settled && !o.archived);
+    }
+    if (activeTab === 'archive') {
+      result = result.filter(o => o.archived);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -370,6 +393,104 @@ function App() {
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser]);
+
+  const handleTableKeyDown = (e) => {
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
+    
+    const target = e.target;
+    if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+
+    const table = target.closest('table');
+    if (!table) return;
+    
+    const inputs = Array.from(table.querySelectorAll('input:not([type="checkbox"]), select:not([disabled])'));
+    const index = inputs.indexOf(target);
+    if (index === -1) return;
+
+    const row = target.closest('tr');
+    const inputsInRow = Array.from(row.querySelectorAll('input:not([type="checkbox"]), select:not([disabled])'));
+    const cols = inputsInRow.length;
+
+    let nextIndex = index;
+
+    if (e.key === 'ArrowRight') {
+      nextIndex = index - 1; // RTL: right is previous
+    } else if (e.key === 'ArrowLeft') {
+      nextIndex = index + 1; // RTL: left is next
+    } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      nextIndex = index + cols;
+    } else if (e.key === 'ArrowUp') {
+      nextIndex = index - cols;
+    }
+
+    if (nextIndex >= 0 && nextIndex < inputs.length) {
+      e.preventDefault();
+      inputs[nextIndex].focus();
+      if (inputs[nextIndex].tagName === 'INPUT') {
+        setTimeout(() => inputs[nextIndex].select(), 10);
+      }
+    }
+  };
+
+  const handleTablePaste = async (e) => {
+    // Only intercept if we are pasting into the table container, but not inside a text input (so we don't mess up normal pasting)
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const clipboardData = e.clipboardData || window.clipboardData;
+    const pastedData = clipboardData.getData('Text');
+    if (!pastedData) return;
+
+    const rows = pastedData.trim().split('\n').map(row => row.split('\t'));
+    if (rows.length === 0 || rows[0].length < 2) return; // Basic validation: at least some columns
+
+    e.preventDefault();
+    if (!window.confirm(`هل تريد لصق وإضافة ${rows.length} شحنة جديدة؟`)) return;
+
+    try {
+      let batch = writeBatch(db);
+      let count = 0;
+      for (const row of rows) {
+        // Simple mapping based on expected Excel columns: (Adjust index as needed based on what they copy)
+        // Usually: Date, Sender, Code, Name, Center, Phone, Count, Total, Agent, Status...
+        // We will try a basic mapping: 0: Date, 1: Sender, 2: Code, 3: Name, 4: Center, 5: Phone, 6: Count, 7: Total
+        // This is a generic approach.
+        
+        const newId = Math.random().toString(36).substr(2, 9);
+        const orderDoc = {
+          id: newId,
+          date: row[0] || today(),
+          sender: row[1] || '',
+          code: row[2] || '',
+          customerName: row[3] || '',
+          center: row[4] || '',
+          phone: row[5] || '',
+          count: Number(row[6]) || 1,
+          total: Number(row[7]) || 0,
+          agent: row[8] || '',
+          status: row[9] || '',
+          collected: Number(row[10]) || 0,
+          shippingFee: Number(row[11]) || 0,
+          commission: Number(row[12]) || 20,
+          returns: row[13] || '',
+          notes: row[14] || '',
+          company: row[1] || '', // Guessing company is sender
+          settled: false,
+          archived: false
+        };
+        batch.set(doc(db, 'orders', newId), orderDoc);
+        count++;
+        if (count === 500) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+      if (count > 0) await batch.commit();
+      alert(`تم إضافة ${rows.length} شحنة بنجاح!`);
+    } catch(err) {
+      alert('خطأ في اللصق: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -691,6 +812,7 @@ function App() {
         <nav className="flex-1 p-3 flex flex-col gap-1">
           {!isAgent && <NavButton id="dashboard" icon={TrendingUp} label="لوحة التحكم" />}
           <NavButton id="data-entry" icon={FileSpreadsheet} label={isAgent ? 'طلباتي' : 'الطلبات والإدخال'} />
+          {!isAgent && <NavButton id="archive" icon={Archive} label="سجل الشحنات" />}
           {!isAgent && <NavButton id="company-summary" icon={BarChart3} label="تقفيل الشركات" />}
           {!isAgent && <div className="my-2 border-t border-white/5"></div>}
           {!isAgent && <NavButton id="merchants" icon={Store} label="التجار" />}
@@ -768,6 +890,7 @@ function App() {
             <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">
               {activeTab === 'dashboard' && 'لوحة التحكم'}
               {activeTab === 'data-entry' && 'الطلبات والإدخال'}
+              {activeTab === 'archive' && 'سجل الشحنات'}
               {activeTab === 'company-summary' && 'تقفيل الشركات'}
               {activeTab === 'merchants' && 'التجار والشركات'}
               {activeTab === 'agents' && 'المناديب'}
@@ -779,7 +902,7 @@ function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {(activeTab === 'data-entry' || activeTab === 'company-summary') && (
+            {(activeTab === 'data-entry' || activeTab === 'archive' || activeTab === 'company-summary') && (
               <div className="relative">
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-slate-400" />
                 <input type="text" placeholder="بحث..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -788,8 +911,17 @@ function App() {
             )}
 
 
-            {activeTab === 'data-entry' && (
+            {(activeTab === 'data-entry' || activeTab === 'archive') && (
               <div className="flex gap-2">
+                {activeTab === 'data-entry' && (
+                  <button 
+                    onClick={() => handleArchiveOrders(filteredOrders)} 
+                    className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
+                    title="نقل كل الطلبات المعروضة إلى سجل الشحنات"
+                  >
+                    <Archive className="w-4 h-4" /> ترحيل الشيت
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsQuickDispatchOpen(true)} 
                   className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95"
@@ -846,7 +978,7 @@ function App() {
               </>
             )}
 
-            {(activeTab === 'company-summary' || activeTab === 'data-entry') && (
+            {(activeTab === 'company-summary' || activeTab === 'data-entry' || activeTab === 'archive') && (
               <div className="flex items-center gap-1.5">
                 <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium shadow-sm transition-colors">
                   <Upload className="w-3.5 h-3.5" /> استيراد
@@ -867,7 +999,7 @@ function App() {
         <div className="hidden print:block text-center mb-6">
            <h1 className="text-3xl font-bold mb-2">
              {activeTab === 'company-summary' ? (selectedCompany === 'الكل' ? `كشف حساب الشحنات` : `كشف حساب شركة: ${selectedCompany}`) : ''}
-             {activeTab === 'data-entry' ? 'سجل الطلبات والشحنات' : ''}
+             {activeTab === 'data-entry' ? 'طلبات اليوم' : activeTab === 'archive' ? 'سجل الشحنات الشامل' : ''}
            </h1>
            <p className="text-gray-500">تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')}</p>
         </div>
@@ -878,7 +1010,7 @@ function App() {
         )}
 
         {/* ============ DATA ENTRY ============ */}
-        {activeTab === 'data-entry' && (
+        {(activeTab === 'data-entry' || activeTab === 'archive') && (
           <>
             {/* Quick Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
@@ -916,7 +1048,7 @@ function App() {
 
             {/* Orders Table — View Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
-              <div className="overflow-x-auto flex-1 custom-scrollbar">
+              <div className="overflow-x-auto flex-1 custom-scrollbar" onKeyDown={handleTableKeyDown} onPaste={handleTablePaste} tabIndex="0">
                 <table className="w-full text-sm text-right print:text-xs">
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-550 font-bold sticky top-0 z-10">
                     <tr className="border-b border-slate-200">
