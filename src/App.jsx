@@ -45,6 +45,7 @@ function App() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showSettled, setShowSettled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeSheetName, setActiveSheetName] = useState('شيت 1');
   const fileInputRef = useRef(null);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -110,6 +111,12 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [salaryPayments, setSalaryPayments] = useState([]);
+
+  const sheetsList = useMemo(() => {
+    const sheets = [...new Set(orders.map(o => o.sheetName).filter(Boolean))];
+    if (!sheets.includes('شيت 1')) sheets.unshift('شيت 1');
+    return sheets;
+  }, [orders]);
 
 
   // --- Firebase Sync ---
@@ -188,7 +195,7 @@ function App() {
 
   const openAddModal = () => {
     setEditingOrder({
-      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false, archived: false
+      id: Math.random().toString(36).substr(2, 9), date: today(), sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false, archived: false, sheetName: activeSheetName
     });
     setIsModalOpen(true);
   };
@@ -371,10 +378,10 @@ function App() {
       result = result.filter(o => !o.settled);
     }
     if (activeTab === 'data-entry') {
-      result = result.filter(o => !o.settled && o.date === today());
+      result = result.filter(o => !o.settled && (o.sheetName || 'شيت 1') === activeSheetName);
     }
     if (activeTab === 'archive') {
-      result = result.filter(o => !o.settled && o.date !== today());
+      result = result.filter(o => !o.settled && (o.sheetName || 'شيت 1') !== activeSheetName);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -475,7 +482,8 @@ function App() {
           notes: row[14] || '',
           company: row[1] || '', // Guessing company is sender
           settled: false,
-          archived: false
+          archived: false,
+          sheetName: activeSheetName
         };
         batch.set(doc(db, 'orders', newId), orderDoc);
         count++;
@@ -1229,6 +1237,32 @@ function App() {
                 </table>
               </div>
 
+              {/* Sheet Tabs */}
+              <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden">
+                <button
+                  onClick={() => {
+                    const newName = prompt('اسم الشيت الجديد:');
+                    if (newName && newName.trim() !== '') {
+                      setActiveSheetName(newName.trim());
+                    }
+                  }}
+                  className="flex items-center justify-center min-w-[32px] h-8 bg-white border border-slate-300 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors shadow-sm"
+                  title="إضافة شيت جديد"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <div className="w-[1px] h-5 bg-slate-300 mx-1"></div>
+                {sheetsList.map(sheet => (
+                  <button
+                    key={sheet}
+                    onClick={() => setActiveSheetName(sheet)}
+                    className={`px-4 py-1.5 rounded-t-lg text-sm font-semibold transition-all whitespace-nowrap ${activeSheetName === sheet ? 'bg-white text-indigo-700 border-t-2 border-indigo-500 shadow-sm' : 'text-slate-600 hover:bg-slate-200/50'}`}
+                  >
+                    {sheet}
+                  </button>
+                ))}
+              </div>
+
               {/* Pagination Controls */}
               <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 p-4 bg-slate-50/50 print:hidden text-xs text-slate-500">
                 <div>
@@ -1272,6 +1306,10 @@ function App() {
                     <option value="50">50</option>
                     <option value="100">100</option>
                     <option value="250">250</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="2000">2000</option>
+                    <option value="3000">3000</option>
                     <option value="الكل">الكل</option>
                   </select>
                 </div>
@@ -1530,6 +1568,10 @@ function App() {
                     <option value="50">50</option>
                     <option value="100">100</option>
                     <option value="250">250</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="2000">2000</option>
+                    <option value="3000">3000</option>
                     <option value="الكل">الكل</option>
                   </select>
                 </div>
