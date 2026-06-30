@@ -1016,7 +1016,7 @@ function App() {
                               <input 
                                 key={order.id + '-shippingFee-' + (order.shippingFee !== undefined ? order.shippingFee : '')}
                                 type="number" 
-                                defaultValue={order.shippingFee !== undefined ? order.shippingFee : (merchants.find(m => m.name === order.company)?.rate || 0)} 
+                                defaultValue={order.shippingFee !== undefined ? order.shippingFee : (order.commission !== undefined ? order.commission : (merchants.find(m => m.name === order.company)?.rate || 0))} 
                                 disabled={isAgent}
                                 onBlur={(e) => {
                                   const val = Number(e.target.value) || 0;
@@ -1030,7 +1030,7 @@ function App() {
                               <input 
                                 key={order.id + '-commission-' + (order.commission || 0)}
                                 type="number" 
-                                defaultValue={order.commission || 0} 
+                                defaultValue={order.shippingFee !== undefined ? order.commission : 20} 
                                 disabled={isAgent}
                                 onBlur={(e) => {
                                   const val = Number(e.target.value) || 0;
@@ -1042,9 +1042,9 @@ function App() {
                               />
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-center font-black text-indigo-750 text-[15px]">
+                          <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">
                             {(() => {
-                              const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+                              const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (order.commission !== undefined ? Number(order.commission) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0));
                               return calculateNet(order.collected, sFee).toLocaleString();
                             })()}
                           </td>
@@ -1309,7 +1309,7 @@ function App() {
                             <input 
                               key={order.id + '-shippingFee-' + (order.shippingFee !== undefined ? order.shippingFee : '')}
                               type="number" 
-                              defaultValue={order.shippingFee !== undefined ? order.shippingFee : (merchants.find(m => m.name === order.company)?.rate || 0)} 
+                              defaultValue={order.shippingFee !== undefined ? order.shippingFee : (order.commission !== undefined ? order.commission : (merchants.find(m => m.name === order.company)?.rate || 0))} 
                               onBlur={(e) => {
                                 const val = Number(e.target.value) || 0;
                                 if (val !== order.shippingFee) handleOrderChange(order.id, 'shippingFee', val);
@@ -1319,7 +1319,7 @@ function App() {
                           </td>
                           <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">
                             {(() => {
-                              const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+                              const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (order.commission !== undefined ? Number(order.commission) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0));
                               return calculateNet(order.collected, sFee).toLocaleString();
                             })()}
                           </td>
