@@ -41,8 +41,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCompany, setSelectedCompany] = useState('الكل');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState(today());
-  const [filterDateTo, setFilterDateTo] = useState(today());
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [showSettled, setShowSettled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const fileInputRef = useRef(null);
