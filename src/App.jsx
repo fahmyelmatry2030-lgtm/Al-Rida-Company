@@ -371,10 +371,10 @@ function App() {
       result = result.filter(o => !o.settled);
     }
     if (activeTab === 'data-entry') {
-      result = result.filter(o => !o.settled && !o.archived);
+      result = result.filter(o => !o.settled && o.date === today());
     }
     if (activeTab === 'archive') {
-      result = result.filter(o => o.archived);
+      result = result.filter(o => !o.settled && o.date !== today());
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -913,15 +913,6 @@ function App() {
 
             {(activeTab === 'data-entry' || activeTab === 'archive') && (
               <div className="flex gap-2">
-                {activeTab === 'data-entry' && (
-                  <button 
-                    onClick={() => handleArchiveOrders(filteredOrders)} 
-                    className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
-                    title="نقل كل الطلبات المعروضة إلى سجل الشحنات"
-                  >
-                    <Archive className="w-4 h-4" /> ترحيل الشيت
-                  </button>
-                )}
                 <button 
                   onClick={() => setIsQuickDispatchOpen(true)} 
                   className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95"
