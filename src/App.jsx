@@ -414,7 +414,9 @@ function App() {
       acc.totalCollected += Number(order.collected) || 0;
       acc.totalCommission += Number(order.commission) || 0;
       
-      const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+      const sFee = order.shippingFee !== undefined 
+        ? Number(order.shippingFee) 
+        : (order.commission !== undefined ? Number(order.commission) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0));
       acc.totalNet += calculateNet(order.collected, sFee);
       
       if (order.status === 'تم التسليم') acc.delivered++;
@@ -431,8 +433,15 @@ function App() {
     const totalCompanyNet = orders.reduce((sum, o) => {
       const isDelivered = ['تم التسليم', 'اوت زون', 'نزول', 'جزئي'].includes(o.status);
       if (!isDelivered) return sum;
-      const sFee = o.shippingFee !== undefined ? Number(o.shippingFee) : (Number(merchants.find(m => m.name === o.company)?.rate) || 0);
-      const comm = Number(o.commission) || 0;
+      
+      const sFee = o.shippingFee !== undefined 
+        ? Number(o.shippingFee) 
+        : (o.commission !== undefined ? Number(o.commission) : (Number(merchants.find(m => m.name === o.company)?.rate) || 0));
+        
+      const comm = o.shippingFee !== undefined 
+        ? (Number(o.commission) || 0) 
+        : 20;
+        
       return sum + (sFee - comm);
     }, 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) + salaryPayments.reduce((sum, p) => sum + (Number(p.netSalary) || 0), 0);
