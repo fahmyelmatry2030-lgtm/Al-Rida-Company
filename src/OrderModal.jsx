@@ -30,14 +30,35 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
     let updated = { ...formData, [field]: value };
     if (field === 'status') {
       const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
-      if (zeroCollectedStatuses.includes(value)) updated.collected = 0;
-      else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) updated.collected = updated.total;
+      if (zeroCollectedStatuses.includes(value)) {
+        updated.collected = 0;
+        updated.shippingFee = 0;
+      } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) {
+        updated.collected = updated.total;
+        const merchant = merchants.find(m => m.name === updated.company);
+        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
+      }
+    } else if (field === 'company') {
+      const merchant = merchants.find(m => m.name === value);
+      if (merchant) {
+        updated.shippingFee = Number(merchant.rate) || 0;
+      }
     }
     setFormData(updated);
   };
 
+  const getDisplayShippingFee = () => {
+    if (formData.shippingFee !== undefined) return formData.shippingFee;
+    const merchant = merchants.find(m => m.name === formData.company);
+    return merchant ? Number(merchant.rate) || 0 : 0;
+  };
+
   const handleSave = () => {
-    onSave(formData);
+    const finalData = { ...formData };
+    if (finalData.shippingFee === undefined) {
+      finalData.shippingFee = getDisplayShippingFee();
+    }
+    onSave(finalData);
     onClose();
   };
 
@@ -140,21 +161,26 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
                   <input type="number" value={formData.collected || ''} onChange={e => handleChange('collected', e.target.value)} className="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm text-center font-bold text-emerald-700" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">العمولة</label>
-                  <input type="number" value={formData.commission || ''} onChange={e => handleChange('commission', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm text-center" />
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">سعر الشحن</label>
+                  <input type="number" value={formData.shippingFee !== undefined ? formData.shippingFee : getDisplayShippingFee()} onChange={e => handleChange('shippingFee', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm text-center font-bold text-indigo-700" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">عمولة المندوب</label>
+                  <input type="number" value={formData.commission || ''} onChange={e => handleChange('commission', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm text-center" />
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">المرتجعات</label>
                   <input type="text" value={formData.returns || ''} onChange={e => handleChange('returns', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">الصافي</label>
-                  <div className="w-full bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2.5 text-sm text-center font-bold text-indigo-700 flex items-center justify-center">
-                    {(Number(formData.collected) || 0) - (Number(formData.commission) || 0)}
-                  </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">الصافي للتاجر (المحصل - الشحن)</label>
+                <div className="w-full bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2.5 text-sm text-center font-bold text-indigo-700 flex items-center justify-center">
+                  {(Number(formData.collected) || 0) - getDisplayShippingFee()}
                 </div>
               </div>
 

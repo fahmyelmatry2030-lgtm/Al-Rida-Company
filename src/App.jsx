@@ -159,7 +159,7 @@ function App() {
     }
   };
 
-  const calculateNet = (collected, commission) => (Number(collected) || 0) - (Number(commission) || 0);
+  const calculateNet = (collected, shippingFee) => (Number(collected) || 0) - (Number(shippingFee) || 0);
 
   // --- Orders Logic ---
   const handleOrderChange = async (id, field, value) => {
@@ -169,8 +169,14 @@ function App() {
     let updatedOrder = { ...order, [field]: value };
     if (field === 'status') {
       const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
-      if (zeroCollectedStatuses.includes(value)) updatedOrder.collected = 0;
-      else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) updatedOrder.collected = updatedOrder.total;
+      if (zeroCollectedStatuses.includes(value)) {
+        updatedOrder.collected = 0;
+        updatedOrder.shippingFee = 0;
+      } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) {
+        updatedOrder.collected = updatedOrder.total;
+        const merchant = merchants.find(m => m.name === updatedOrder.company);
+        updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
+      }
     }
     
     try {
@@ -407,22 +413,31 @@ function App() {
       acc.totalOrders++;
       acc.totalCollected += Number(order.collected) || 0;
       acc.totalCommission += Number(order.commission) || 0;
-      acc.totalNet += calculateNet(order.collected, order.commission);
+      
+      const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+      acc.totalNet += calculateNet(order.collected, sFee);
+      
       if (order.status === 'تم التسليم') acc.delivered++;
       else if (['لاغي', 'رفض شحن'].includes(order.status)) acc.cancelled++;
       else if (['مؤجل', 'غير متاح', 'عدم رد', 'تهرب'].includes(order.status)) acc.pending++;
       return acc;
     }, { totalOrders: 0, totalCollected: 0, totalCommission: 0, totalNet: 0, delivered: 0, cancelled: 0, pending: 0 });
-  }, [filteredOrders]);
+  }, [filteredOrders, merchants]);
 
   const hasUnsettledInView = filteredOrders.some(o => !o.settled);
 
   // Company Overall Profit
   const companyProfits = useMemo(() => {
-    const totalCompanyNet = orders.reduce((sum, o) => sum + calculateNet(o.collected, o.commission), 0);
+    const totalCompanyNet = orders.reduce((sum, o) => {
+      const isDelivered = ['تم التسليم', 'اوت زون', 'نزول', 'جزئي'].includes(o.status);
+      if (!isDelivered) return sum;
+      const sFee = o.shippingFee !== undefined ? Number(o.shippingFee) : (Number(merchants.find(m => m.name === o.company)?.rate) || 0);
+      const comm = Number(o.commission) || 0;
+      return sum + (sFee - comm);
+    }, 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) + salaryPayments.reduce((sum, p) => sum + (Number(p.netSalary) || 0), 0);
     return { totalCompanyNet, totalExpenses, netProfit: totalCompanyNet - totalExpenses };
-  }, [orders, expenses, salaryPayments]);
+  }, [orders, expenses, salaryPayments, merchants]);
 
   // CRUD helpers
   const deleteArrayItem = async (collectionName, id, msg) => {
@@ -447,15 +462,22 @@ function App() {
 
   // Export
   const exportOrdersToExcel = () => {
-    const dataToExport = filteredOrders.map((order, i) => ({
-      'م': i + 1, 'التاريخ': order.date, 'الراسل': order.sender, 'الكود': order.code, 'الاسم': order.customerName, 'المنطقه': order.center,
-      'الرقم': order.phone, 'العدد': order.count, 'السعر': order.total, 'المندوب': order.agent, 'الموقف': order.status,
-      'المحصل': order.collected, 'العمولة': order.commission, 'الصافي': calculateNet(order.collected, order.commission),
-      'المرتجعات': order.returns, 'ملاحظات': order.notes, 'الشركات': order.company, 'الحالة': order.settled ? 'تم التقفيل' : 'مفتوح',
-    }));
+    const dataToExport = filteredOrders.map((order, i) => {
+      const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+      const isCompanySummary = activeTab === 'company-summary';
+      return {
+        'م': i + 1, 'التاريخ': order.date, 'الراسل': order.sender, 'الكود': order.code, 'الاسم': order.customerName, 'المنطقه': order.center,
+        'الرقم': order.phone, 'العدد': order.count, 'السعر': order.total, 'المندوب': order.agent, 'الموقف': order.status,
+        'المحصل': order.collected, 
+        [isCompanySummary ? 'سعر الشحن' : 'العمولة']: isCompanySummary ? sFee : (order.commission || 0), 
+        'الصافي': calculateNet(order.collected, sFee),
+        'المرتجعات': order.returns, 'ملاحظات': order.notes, 'الشركات': order.company, 'الحالة': order.settled ? 'تم التقفيل' : 'مفتوح',
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
-      XLSX.utils.sheet_add_json(ws, [{}, { 'الإجمالي': 'الإجماليات:', 'المحصل': summaryStats.totalCollected, 'العمولة': summaryStats.totalCommission, 'الصافي': summaryStats.totalNet }], { skipHeader: true, origin: -1 });
+      const totalShippingFee = filteredOrders.reduce((sum, o) => sum + (o.shippingFee !== undefined ? Number(o.shippingFee) : (Number(merchants.find(m => m.name === o.company)?.rate) || 0)), 0);
+      XLSX.utils.sheet_add_json(ws, [{}, { 'الإجمالي': 'الإجماليات:', 'المحصل': summaryStats.totalCollected, 'سعر الشحن': totalShippingFee, 'الصافي': summaryStats.totalNet }], { skipHeader: true, origin: -1 });
     }
     ws['!dir'] = 'rtl';
     const wb = XLSX.utils.book_new();
@@ -523,6 +545,11 @@ function App() {
           const notes = findValue(row, ['ملاحظات', 'الملاحظات', 'البيان', 'notes'])?.toString().trim() || '';
           const returns = findValue(row, ['المرتجع', 'المرتجهات', 'returns'])?.toString().trim() || '';
 
+          const merchantObj = merchants.find(m => m.name === (company || sender));
+          const defaultRate = merchantObj ? Number(merchantObj.rate) || 0 : 0;
+          const shippingFeeInput = findValue(row, ['سعر الشحن', 'الشحن', 'شحن', 'shippingFee', 'shipping_fee']);
+          const shippingFee = shippingFeeInput !== '' ? (Number(shippingFeeInput) || 0) : defaultRate;
+
           return {
             id: Math.random().toString(36).substr(2, 9),
             date: today(),
@@ -537,6 +564,7 @@ function App() {
             status,
             collected: status === 'تم التسليم' || status === 'جزئي' ? (collected || total) : collected,
             commission,
+            shippingFee,
             returns,
             notes,
             company: company || sender,
@@ -898,7 +926,7 @@ function App() {
                       <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
                       <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
-                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">العموله</th>
+                      <th className="px-1 py-2 text-center min-w-[110px] max-w-[130px]">شحن / عمولة</th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
                       <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
                       <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
@@ -983,19 +1011,43 @@ function App() {
                             />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                            <input 
-                              key={order.id + '-commission-' + (order.commission || 0)}
-                              type="number" 
-                              defaultValue={order.commission || 0} 
-                              disabled={isAgent}
-                              onBlur={(e) => {
-                                const val = Number(e.target.value) || 0;
-                                if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
-                              }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                            />
+                            <div className="flex gap-1 justify-center">
+                              {/* Shipping Fee */}
+                              <input 
+                                key={order.id + '-shippingFee-' + (order.shippingFee !== undefined ? order.shippingFee : '')}
+                                type="number" 
+                                defaultValue={order.shippingFee !== undefined ? order.shippingFee : (merchants.find(m => m.name === order.company)?.rate || 0)} 
+                                disabled={isAgent}
+                                onBlur={(e) => {
+                                  const val = Number(e.target.value) || 0;
+                                  if (val !== order.shippingFee) handleOrderChange(order.id, 'shippingFee', val);
+                                }}
+                                className="border border-slate-250 rounded px-1 py-1 text-xs font-bold text-indigo-650 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                title="سعر الشحن للتاجر"
+                                placeholder="شحن"
+                              />
+                              {/* Agent Commission */}
+                              <input 
+                                key={order.id + '-commission-' + (order.commission || 0)}
+                                type="number" 
+                                defaultValue={order.commission || 0} 
+                                disabled={isAgent}
+                                onBlur={(e) => {
+                                  const val = Number(e.target.value) || 0;
+                                  if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
+                                }}
+                                className="border border-slate-250 rounded px-1 py-1 text-xs font-semibold text-slate-700 w-10 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                title="عمولة المندوب"
+                                placeholder="عمولة"
+                              />
+                            </div>
                           </td>
-                          <td className="px-3 py-2 text-center font-black text-indigo-750 text-[15px]">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-center font-black text-indigo-750 text-[15px]">
+                            {(() => {
+                              const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+                              return calculateNet(order.collected, sFee).toLocaleString();
+                            })()}
+                          </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-returns-' + (order.returns || '')}
@@ -1173,7 +1225,7 @@ function App() {
                       <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
                       <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
-                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">العموله</th>
+                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">الشحن</th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
                       <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
                       <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
@@ -1255,17 +1307,22 @@ function App() {
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
-                              key={order.id + '-commission-' + (order.commission || 0)}
+                              key={order.id + '-shippingFee-' + (order.shippingFee !== undefined ? order.shippingFee : '')}
                               type="number" 
-                              defaultValue={order.commission || 0} 
+                              defaultValue={order.shippingFee !== undefined ? order.shippingFee : (merchants.find(m => m.name === order.company)?.rate || 0)} 
                               onBlur={(e) => {
                                 const val = Number(e.target.value) || 0;
-                                if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
+                                if (val !== order.shippingFee) handleOrderChange(order.id, 'shippingFee', val);
                               }}
                               className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                             />
                           </td>
-                          <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">{calculateNet(order.collected, order.commission).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">
+                            {(() => {
+                              const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0);
+                              return calculateNet(order.collected, sFee).toLocaleString();
+                            })()}
+                          </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
                               key={order.id + '-returns-' + (order.returns || '')}

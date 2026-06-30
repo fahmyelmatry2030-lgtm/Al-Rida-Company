@@ -101,6 +101,13 @@ export default function SalaryPage({ employees, orders, currentUser }) {
         paidAt: new Date().toISOString(),
         paidBy: currentUser?.name || 'المدير',
       });
+      // Link to treasury expenses
+      await setDoc(doc(db, 'expenses', `salary_${payId}`), {
+        id: `salary_${payId}`,
+        date: new Date().toISOString().split('T')[0],
+        amount: stats.net,
+        notes: `صرف مرتب الموظف: ${emp.name} - لشهر: ${MONTHS_AR[month]} ${year}`
+      });
     } catch (err) { alert('خطأ: ' + err.message); }
     setLoading(prev => ({ ...prev, [emp.id]: false }));
   };
@@ -108,7 +115,10 @@ export default function SalaryPage({ employees, orders, currentUser }) {
   const handleUnpay = async (empId) => {
     if (!window.confirm('إلغاء تأكيد دفع المرتب؟')) return;
     const payId = `${empId}_${year}_${month}`;
-    try { await deleteDoc(doc(db, 'salary_payments', payId)); } catch (err) { alert('خطأ: ' + err.message); }
+    try { 
+      await deleteDoc(doc(db, 'salary_payments', payId)); 
+      await deleteDoc(doc(db, 'expenses', `salary_${payId}`));
+    } catch (err) { alert('خطأ: ' + err.message); }
   };
 
   const totalNet = employees.reduce((sum, emp) => {
