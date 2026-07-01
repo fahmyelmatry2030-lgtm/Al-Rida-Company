@@ -115,8 +115,9 @@ function App() {
   const dateTabs = useMemo(() => {
     const dates = [...new Set(orders.map(o => o.date).filter(Boolean))].sort((a, b) => new Date(a) - new Date(b));
     if (!dates.includes(today())) dates.push(today());
-    return dates;
-  }, [orders]);
+    if (!dates.includes(activeDateTab)) dates.push(activeDateTab);
+    return dates.sort((a, b) => new Date(a) - new Date(b));
+  }, [orders, activeDateTab]);
 
 
   // --- Firebase Sync ---
@@ -1237,7 +1238,18 @@ function App() {
               </div>
 
               {/* Sheet Tabs */}
-              <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden" dir="ltr">
+              <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden">
+                <div className="relative flex items-center justify-center min-w-[32px] h-8 bg-white border border-slate-300 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors shadow-sm shrink-0" title="فتح شيت لتاريخ محدد">
+                  <Calendar className="w-4 h-4" />
+                  <input 
+                    type="date" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      if (e.target.value) setActiveDateTab(e.target.value);
+                    }}
+                  />
+                </div>
+                <div className="w-[1px] h-5 bg-slate-300 mx-1 shrink-0"></div>
                 {dateTabs.map(dateStr => {
                   // Format YYYY-MM-DD to "Weekday DD/MM"
                   const parts = dateStr.split('-');
