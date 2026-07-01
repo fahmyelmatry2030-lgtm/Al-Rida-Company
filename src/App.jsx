@@ -119,61 +119,19 @@ function App() {
   const [salaryPayments, setSalaryPayments] = useState([]);
 
   const dateTabs = useMemo(() => {
-    const dates = [];
-    // Generate the last 7 consecutive days
-    for (let i = 0; i < 7; i++) {
+    const unarchivedDates = new Set(orders.filter(o => !o.archived && o.date).map(o => o.date));
+    
+    for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      dates.push(`${yyyy}-${mm}-${dd}`);
+      unarchivedDates.add(d.toISOString().split('T')[0]);
     }
-    // Ensure activeDateTab is included if user picked an older date from the calendar
-    if (activeDateTab && !dates.includes(activeDateTab)) {
-      dates.push(activeDateTab);
+    
+    if (activeDateTab) {
+      unarchivedDates.add(activeDateTab);
     }
-    return dates.sort((a, b) => new Date(a) - new Date(b));
-  }, [activeDateTab]);
-
-  // Auto-archive oldest day if it's older than the 7-day window
-  useEffect(() => {
-    if (!orders || orders.length === 0) return;
-    
-    // Generate the oldest allowed date (6 days ago, so total 7 days including today)
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const cutoffDate = `${yyyy}-${mm}-${dd}`;
-    
-    const unarchivedOrders = orders.filter(o => !o.archived);
-    const ordersToAutoArchive = unarchivedOrders.filter(o => o.date <= cutoffDate);
-    
-    if (ordersToAutoArchive.length > 0) {
-      const autoArchive = async () => {
-        try {
-          let batch = writeBatch(db);
-          let count = 0;
-          for (const order of ordersToAutoArchive) {
-            batch.update(doc(db, 'orders', order.id), { archived: true });
-            count++;
-            if (count === 400) {
-              await batch.commit();
-              batch = writeBatch(db);
-              count = 0;
-            }
-          }
-          if (count > 0) await batch.commit();
-          console.log(`Auto-archived ${ordersToAutoArchive.length} orders older than ${cutoffDate}.`);
-        } catch (err) {
-          console.error('Error auto-archiving:', err);
-        }
-      };
-      autoArchive();
-    }
-  }, [orders]);
+    return Array.from(unarchivedDates).sort((a, b) => new Date(a) - new Date(b));
+  }, [activeDateTab, orders]);
 
 
   // --- Firebase Sync ---
@@ -444,10 +402,10 @@ function App() {
       result = result.filter(o => !o.settled);
     }
     if (activeTab === 'data-entry') {
-      result = result.filter(o => !o.settled && o.date === activeDateTab);
+      result = result.filter(o => !o.archived && o.date === activeDateTab);
     }
     if (activeTab === 'archive') {
-      result = result.filter(o => !o.settled && o.date !== activeDateTab);
+      result = result.filter(o => o.archived);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -994,6 +952,15 @@ function App() {
 
             {(activeTab === 'data-entry' || activeTab === 'archive') && (
               <div className="flex gap-2">
+                {activeTab === 'data-entry' && !isAgent && (
+                  <button 
+                    onClick={() => handleArchiveOrders(filteredOrders)} 
+                    className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
+                    title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
+                  >
+                    <Archive className="w-4 h-4" /> ترحيل اليوم
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsQuickDispatchOpen(true)} 
                   className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95"
