@@ -666,33 +666,29 @@ function App() {
         // Helper to find value from row by checking a list of column aliases
         const findValue = (row, aliases) => {
           const rowKeys = Object.keys(row);
-          // First pass: look for exact clean matches (ignoring all spaces/special chars)
+          const cleanString = (str) => str.replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '').toLowerCase();
+
+          // First pass: look for exact clean matches
           for (const alias of aliases) {
-            const cleanAlias = alias.replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
+            const cleanAlias = cleanString(alias);
             for (const rk of rowKeys) {
-              const cleanRk = rk.trim().replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
-              if (cleanRk === cleanAlias) {
-                return row[rk];
-              }
+              if (cleanString(rk) === cleanAlias) return row[rk];
             }
           }
-          // Second pass: look for partial matches (excluding short ambiguous keys)
+          // Second pass: look for partial matches
           for (const alias of aliases) {
             if (alias.length < 3) continue; 
-            const cleanAlias = alias.replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
+            const cleanAlias = cleanString(alias);
             for (const rk of rowKeys) {
-              const cleanRk = rk.trim().replace(/[\s\u00A0\u200B_\-\.]/g, '').toLowerCase();
-              if (cleanRk.includes(cleanAlias)) {
-                return row[rk];
-              }
+              if (cleanString(rk).includes(cleanAlias)) return row[rk];
             }
           }
           return '';
         };
 
         const importedOrders = data.map(row => {
-          const company = findValue(row, ['الشركات', 'company', 'merchant'])?.toString().trim() || '';
-          const sender = findValue(row, ['التاجر', 'التجار', 'الراسل', 'اسم الراسل', 'الشركة', 'الشركه', 'sender'])?.toString().trim() || '';
+          const company = findValue(row, ['الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
+          const sender = findValue(row, ['الراسل', 'اسم الراسل', 'التاجر', 'التجار', 'sender'])?.toString().trim() || '';
           const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id'])?.toString().trim() || '';
           const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'customer', 'name'])?.toString().trim() || '';
           const center = findValue(row, ['العنوان', 'المنطقه', 'المنطقة', 'المركز', 'address', 'center', 'region'])?.toString().trim() || '';
