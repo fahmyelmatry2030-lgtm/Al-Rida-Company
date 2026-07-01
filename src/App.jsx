@@ -114,11 +114,50 @@ function App() {
   const [salaryPayments, setSalaryPayments] = useState([]);
 
   const dateTabs = useMemo(() => {
-    const dates = [...new Set(orders.map(o => o.date).filter(Boolean))].sort((a, b) => new Date(a) - new Date(b));
+    const unarchivedOrders = orders.filter(o => !o.archived);
+    const dates = [...new Set(unarchivedOrders.map(o => o.date).filter(Boolean))].sort((a, b) => new Date(a) - new Date(b));
     if (!dates.includes(today())) dates.push(today());
     if (!dates.includes(activeDateTab)) dates.push(activeDateTab);
     return dates.sort((a, b) => new Date(a) - new Date(b));
   }, [orders, activeDateTab]);
+
+  // Auto-archive oldest day if more than 7 days of unarchived orders exist
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+    
+    // Only consider unarchived orders for the date count
+    const unarchivedOrders = orders.filter(o => !o.archived);
+    const uniqueDates = [...new Set([...unarchivedOrders.map(o => o.date).filter(Boolean), today()])].sort((a, b) => new Date(a) - new Date(b));
+    
+    // If there are more than 7 distinct days, archive the oldest day(s) until we have 7
+    if (uniqueDates.length > 7) {
+      const datesToArchive = uniqueDates.slice(0, uniqueDates.length - 7);
+      const ordersToAutoArchive = unarchivedOrders.filter(o => datesToArchive.includes(o.date));
+      
+      if (ordersToAutoArchive.length > 0) {
+        const autoArchive = async () => {
+          try {
+            let batch = writeBatch(db);
+            let count = 0;
+            for (const order of ordersToAutoArchive) {
+              batch.update(doc(db, 'orders', order.id), { archived: true });
+              count++;
+              if (count === 400) {
+                await batch.commit();
+                batch = writeBatch(db);
+                count = 0;
+              }
+            }
+            if (count > 0) await batch.commit();
+            console.log(`Auto-archived ${ordersToAutoArchive.length} orders from old dates.`);
+          } catch (err) {
+            console.error('Error auto-archiving:', err);
+          }
+        };
+        autoArchive();
+      }
+    }
+  }, [orders]);
 
 
   // --- Firebase Sync ---
