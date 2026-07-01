@@ -423,7 +423,7 @@ function App() {
       const codeB = String(b.code || '');
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser]);
+  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab]);
 
   const handleTableKeyDown = (e) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
@@ -691,8 +691,8 @@ function App() {
         };
 
         const importedOrders = data.map(row => {
-          const company = findValue(row, ['الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
-          const sender = findValue(row, ['التاجر', 'التجار', 'الراسل', 'اسم الراسل', 'sender'])?.toString().trim() || '';
+          const company = findValue(row, ['الشركات', 'company', 'merchant'])?.toString().trim() || '';
+          const sender = findValue(row, ['التاجر', 'التجار', 'الراسل', 'اسم الراسل', 'الشركة', 'الشركه', 'sender'])?.toString().trim() || '';
           const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id'])?.toString().trim() || '';
           const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'customer', 'name'])?.toString().trim() || '';
           const center = findValue(row, ['العنوان', 'المنطقه', 'المنطقة', 'المركز', 'address', 'center', 'region'])?.toString().trim() || '';
@@ -714,7 +714,7 @@ function App() {
           return {
             id: Math.random().toString(36).substr(2, 9),
             date: activeDateTab,
-            sender: sender || company,
+            sender: sender,
             code,
             customerName,
             center,
@@ -728,7 +728,7 @@ function App() {
             shippingFee,
             returns,
             notes,
-            company: company || sender,
+            company: company,
             settled: false
           };
         });
@@ -950,9 +950,9 @@ function App() {
             )}
 
 
-            {(activeTab === 'data-entry' || activeTab === 'archive') && (
+            {activeTab === 'data-entry' && (
               <div className="flex gap-2">
-                {activeTab === 'data-entry' && !isAgent && (
+                {!isAgent && (
                   <button 
                     onClick={() => handleArchiveOrders(filteredOrders)} 
                     className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
@@ -1019,10 +1019,14 @@ function App() {
 
             {(activeTab === 'company-summary' || activeTab === 'data-entry' || activeTab === 'archive') && (
               <div className="flex items-center gap-1.5">
-                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium shadow-sm transition-colors">
-                  <Upload className="w-3.5 h-3.5" /> استيراد
-                </button>
-                <input type="file" ref={fileInputRef} onChange={importOrdersFromExcel} accept=".xlsx, .xls" className="hidden" />
+                {activeTab !== 'archive' && (
+                  <>
+                    <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium shadow-sm transition-colors">
+                      <Upload className="w-3.5 h-3.5" /> استيراد
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={importOrdersFromExcel} accept=".xlsx, .xls" className="hidden" />
+                  </>
+                )}
                 <button onClick={exportOrdersToExcel} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium shadow-sm transition-colors">
                   <Download className="w-3.5 h-3.5" /> تصدير
                 </button>
