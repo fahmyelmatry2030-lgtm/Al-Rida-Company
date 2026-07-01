@@ -31,6 +31,11 @@ const STATUS_OPTIONS = [
 ];
 
 const today = () => new Date().toISOString().split('T')[0];
+const tomorrow = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+};
 
 const INITIAL_ORDERS = [
   { id: '1', date: today(), sender: 'البدرشين الاثنين', code: '1', customerName: 'سارة فايق', center: 'شارع زكي بدوي', phone: '1270655688', count: 2, total: 1537, agent: 'ابو ذكري الثلاثاء', status: 'نزول', collected: 1537, commission: 20, returns: '', notes: '', company: 'مليكة جينز', settled: false },
@@ -218,7 +223,11 @@ function App() {
     }
   };
 
-  const calculateNet = (collected, shippingFee) => (Number(collected) || 0) - (Number(shippingFee) || 0);
+  const calculateNet = (collected, shippingFee, status) => {
+    const isFeeApplicable = ['تم التسليم', 'جزئي', 'رفض شحن'].includes(status);
+    const feeToDeduct = isFeeApplicable ? (Number(shippingFee) || 0) : 0;
+    return (Number(collected) || 0) - feeToDeduct;
+  };
 
   // --- Orders Logic ---
   const handleOrderChange = async (id, field, value) => {
@@ -235,6 +244,9 @@ function App() {
         updatedOrder.collected = updatedOrder.total;
         const merchant = merchants.find(m => m.name === updatedOrder.company);
         updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
+        if (value === 'نزول') {
+          updatedOrder.date = tomorrow();
+        }
       }
     }
     
@@ -599,7 +611,7 @@ function App() {
       const sFee = order.shippingFee !== undefined 
         ? Number(order.shippingFee) 
         : (order.commission !== undefined ? Number(order.commission) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0));
-      acc.totalNet += calculateNet(order.collected, sFee);
+      acc.totalNet += calculateNet(order.collected, sFee, order.status);
       
       if (order.status === 'تم التسليم') acc.delivered++;
       else if (['لاغي', 'رفض شحن'].includes(order.status)) acc.cancelled++;
@@ -661,7 +673,7 @@ function App() {
         'الرقم': order.phone, 'العدد': order.count, 'السعر': order.total, 'المندوب': order.agent, 'الموقف': order.status,
         'المحصل': order.collected, 
         [isCompanySummary ? 'سعر الشحن' : 'العمولة']: isCompanySummary ? sFee : (order.commission || 0), 
-        'الصافي': calculateNet(order.collected, sFee),
+        'الصافي': calculateNet(order.collected, sFee, order.status),
         'المرتجعات': order.returns, 'ملاحظات': order.notes, 'الشركات': order.company, 'الحالة': order.settled ? 'تم التقفيل' : 'مفتوح',
       };
     });
@@ -722,7 +734,7 @@ function App() {
 
         const importedOrders = data.map(row => {
           const company = findValue(row, ['الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
-          const sender = findValue(row, ['الراسل', 'اسم الراسل', 'sender'])?.toString().trim() || '';
+          const sender = findValue(row, ['التاجر', 'التجار', 'الراسل', 'اسم الراسل', 'sender'])?.toString().trim() || '';
           const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id'])?.toString().trim() || '';
           const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'customer', 'name'])?.toString().trim() || '';
           const center = findValue(row, ['العنوان', 'المنطقه', 'المنطقة', 'المركز', 'address', 'center', 'region'])?.toString().trim() || '';
@@ -743,7 +755,7 @@ function App() {
 
           return {
             id: Math.random().toString(36).substr(2, 9),
-            date: today(),
+            date: activeDateTab,
             sender: sender || company,
             code,
             customerName,
@@ -764,9 +776,17 @@ function App() {
         });
 
         if (importedOrders.length > 0) {
-          // Save all to Firestore
-          for (const order of importedOrders) {
-            await setDoc(doc(db, 'orders', order.id), order);
+          // Save all to Firestore using batch to improve performance
+          const chunks = [];
+          for (let i = 0; i < importedOrders.length; i += 400) {
+            chunks.push(importedOrders.slice(i, i + 400));
+          }
+          for (const chunk of chunks) {
+            const batch = writeBatch(db);
+            for (const order of chunk) {
+              batch.set(doc(db, 'orders', order.id), order);
+            }
+            await batch.commit();
           }
           alert(`تم استيراد ${importedOrders.length} طلب بنجاح وحفظهم في قاعدة البيانات.`);
         }
@@ -1119,7 +1139,7 @@ function App() {
                       <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
                       <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
-                      <th className="px-1 py-2 text-center min-w-[110px] max-w-[130px]">شحن / عمولة</th>
+                      <th className="px-1 py-2 text-center min-w-[110px] max-w-[130px]">العمولة</th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
                       <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
                       <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
@@ -1204,7 +1224,7 @@ function App() {
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <div className="flex gap-1 justify-center">
-                              {/* Shipping Fee */}
+                              {/* Commission (Shipping Fee) */}
                               <input 
                                 key={order.id + '-shippingFee-' + (order.shippingFee !== undefined ? order.shippingFee : '')}
                                 type="number" 
@@ -1214,30 +1234,16 @@ function App() {
                                   const val = Number(e.target.value) || 0;
                                   if (val !== order.shippingFee) handleOrderChange(order.id, 'shippingFee', val);
                                 }}
-                                className="border border-slate-250 rounded px-1 py-1 text-xs font-bold text-indigo-650 w-12 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                                title="سعر الشحن للتاجر"
-                                placeholder="شحن"
-                              />
-                              {/* Agent Commission */}
-                              <input 
-                                key={order.id + '-commission-' + (order.commission || 0)}
-                                type="number" 
-                                defaultValue={order.shippingFee !== undefined ? order.commission : 20} 
-                                disabled={isAgent}
-                                onBlur={(e) => {
-                                  const val = Number(e.target.value) || 0;
-                                  if (val !== order.commission) handleOrderChange(order.id, 'commission', val);
-                                }}
-                                className="border border-slate-250 rounded px-1 py-1 text-xs font-semibold text-slate-700 w-10 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                                title="عمولة المندوب"
-                                placeholder="عمولة"
+                                className="border border-slate-250 rounded px-1 py-1 text-xs font-bold text-indigo-650 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                title="العمولة"
+                                placeholder="العمولة"
                               />
                             </div>
                           </td>
                           <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">
                             {(() => {
                               const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (order.commission !== undefined ? Number(order.commission) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0));
-                              return calculateNet(order.collected, sFee).toLocaleString();
+                              return calculateNet(order.collected, sFee, order.status).toLocaleString();
                             })()}
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
@@ -1456,7 +1462,7 @@ function App() {
                       <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
                       <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
-                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">الشحن</th>
+                      <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">العمولة</th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
                       <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
                       <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
@@ -1550,7 +1556,7 @@ function App() {
                           <td className="px-3 py-2 text-center font-black text-indigo-755 text-[15px]">
                             {(() => {
                               const sFee = order.shippingFee !== undefined ? Number(order.shippingFee) : (order.commission !== undefined ? Number(order.commission) : (Number(merchants.find(m => m.name === order.company)?.rate) || 0));
-                              return calculateNet(order.collected, sFee).toLocaleString();
+                              return calculateNet(order.collected, sFee, order.status).toLocaleString();
                             })()}
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>

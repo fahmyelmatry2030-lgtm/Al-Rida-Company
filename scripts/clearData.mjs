@@ -54,9 +54,10 @@ async function main() {
   
   const ordersCount = await clearCollection("orders");
   const expensesCount = await clearCollection("expenses");
+  const salaryCount = await clearCollection("salaryPayments");
   
   console.log(`\n=== Done ===`);
-  console.log(`Total deleted: ${ordersCount + expensesCount} documents`);
+  console.log(`Total deleted: ${ordersCount + expensesCount + salaryCount} documents`);
   
   process.exit(0);
 }
