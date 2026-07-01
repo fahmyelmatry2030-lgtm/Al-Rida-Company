@@ -52,6 +52,7 @@ function App() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [activeMerchantModal, setActiveMerchantModal] = useState({ isOpen: false, data: null });
   const [activeAgentModal, setActiveAgentModal] = useState({ isOpen: false, data: null });
@@ -198,12 +199,14 @@ function App() {
     setEditingOrder({
       id: Math.random().toString(36).substr(2, 9), date: activeDateTab, sender: '', code: '', customerName: '', center: '', phone: '', count: 1, total: 0, agent: '', status: '', collected: 0, commission: 20, returns: '', notes: '', company: '', settled: false, archived: false
     });
+    setIsEditMode(false);
     setIsModalOpen(true);
   };
 
   const openEditModal = (order) => {
     if (order.settled) return;
     setEditingOrder({ ...order });
+    setIsEditMode(true);
     setIsModalOpen(true);
   };
 
@@ -1116,15 +1119,14 @@ function App() {
                           <td className="px-3 py-2 text-center text-slate-700 font-extrabold text-[14px]">{order.count || 1}</td>
                           <td className="px-3 py-2 text-center font-black text-slate-850 text-[15px]">{Number(order.total || 0).toLocaleString()}</td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
-                            <select 
+                            <input 
+                              type="text"
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
                               disabled={isAgent}
+                              placeholder="المندوب"
                               className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                            >
-                              <option value="">اختر المندوب...</option>
-                              {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                            </select>
+                            />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <select 
@@ -1451,14 +1453,13 @@ function App() {
                           <td className="px-3 py-2 text-center text-slate-700 font-extrabold text-[14px]">{order.count || 1}</td>
                           <td className="px-3 py-2 text-center font-black text-slate-855 text-[15px]">{Number(order.total || 0).toLocaleString()}</td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
-                            <select 
+                            <input 
+                              type="text"
                               value={order.agent || ''} 
                               onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
+                              placeholder="المندوب"
                               className="border border-slate-255 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28"
-                            >
-                              <option value="">اختر المندوب...</option>
-                              {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                            </select>
+                            />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <select 

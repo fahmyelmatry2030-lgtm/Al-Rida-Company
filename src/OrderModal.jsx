@@ -15,7 +15,7 @@ const STATUS_OPTIONS = [
   { label: 'اوت زون', value: 'اوت زون', color: 'bg-teal-100 text-teal-800 border-teal-200' },
 ];
 
-export default function OrderModal({ isOpen, onClose, onSave, order, merchants, agents }) {
+export default function OrderModal({ isOpen, onClose, onSave, order, merchants, agents, isEditMode }) {
   const [formData, setFormData] = useState(order || {});
 
   useEffect(() => {
@@ -78,81 +78,85 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
 
         {/* Body */}
         <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 ${!isEditMode ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
             
-            {/* Section 1: Basic Info */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2 border-b border-indigo-100 pb-2">بيانات الشحنة</h3>
-              
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">تاريخ الطلب</label>
-                <input type="date" value={formData.date || ''} onChange={e => handleChange('date', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
-              </div>
+            {!isEditMode && (
+              <>
+                {/* Section 1: Basic Info */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2 border-b border-indigo-100 pb-2">بيانات الشحنة</h3>
+                  
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">تاريخ الطلب</label>
+                    <input type="date" value={formData.date || ''} onChange={e => handleChange('date', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">الراسل (اليوم/المجموعة)</label>
-                <input type="text" value={formData.sender || ''} onChange={e => handleChange('sender', e.target.value)} placeholder="مثال: البدرشين الاثنين" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">الراسل (اليوم/المجموعة)</label>
+                    <input type="text" value={formData.sender || ''} onChange={e => handleChange('sender', e.target.value)} placeholder="مثال: البدرشين الاثنين" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">الشركة / التاجر</label>
-                <input list="merchants-list" type="text" value={formData.company || ''} onChange={e => handleChange('company', e.target.value)} placeholder="اختر التاجر..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-bold text-indigo-700" />
-                <datalist id="merchants-list">{merchants.map(m => <option key={m.id} value={m.name} />)}</datalist>
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">الشركة / التاجر</label>
+                    <input list="merchants-list" type="text" value={formData.company || ''} onChange={e => handleChange('company', e.target.value)} placeholder="اختر التاجر..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-bold text-indigo-700" />
+                    <datalist id="merchants-list">{merchants.map(m => <option key={m.id} value={m.name} />)}</datalist>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">كود الشحنة</label>
-                <input type="text" value={formData.code || ''} onChange={e => handleChange('code', e.target.value)} placeholder="الكود..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
-              </div>
-            </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">كود الشحنة</label>
+                    <input type="text" value={formData.code || ''} onChange={e => handleChange('code', e.target.value)} placeholder="الكود..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
+                  </div>
+                </div>
 
-            {/* Section 2: Customer Info */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2 border-b border-indigo-100 pb-2">بيانات العميل</h3>
-              
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">اسم العميل</label>
-                <input type="text" value={formData.customerName || ''} onChange={e => handleChange('customerName', e.target.value)} placeholder="اسم العميل..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium" />
-              </div>
+                {/* Section 2: Customer Info */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2 border-b border-indigo-100 pb-2">بيانات العميل</h3>
+                  
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">اسم العميل</label>
+                    <input type="text" value={formData.customerName || ''} onChange={e => handleChange('customerName', e.target.value)} placeholder="اسم العميل..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium" />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">رقم الهاتف</label>
-                <input type="text" value={formData.phone || ''} onChange={e => handleChange('phone', e.target.value)} placeholder="01..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" dir="ltr" />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">رقم الهاتف</label>
+                    <input type="text" value={formData.phone || ''} onChange={e => handleChange('phone', e.target.value)} placeholder="01..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" dir="ltr" />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">المنطقة / المركز</label>
-                <input type="text" value={formData.center || ''} onChange={e => handleChange('center', e.target.value)} placeholder="المنطقة..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">المنطقة / المركز</label>
+                    <input type="text" value={formData.center || ''} onChange={e => handleChange('center', e.target.value)} placeholder="المنطقة..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
+                  </div>
+                </div>
+              </>
+            )}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">المندوب الموزع</label>
-                <input list="agents-list" type="text" value={formData.agent || ''} onChange={e => handleChange('agent', e.target.value)} placeholder="اختر المندوب..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
-                <datalist id="agents-list">{agents.map(a => <option key={a.id} value={a.name} />)}</datalist>
-              </div>
-            </div>
-
-            {/* Section 3: Financials & Status */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2 border-b border-indigo-100 pb-2">الحسابات والموقف</h3>
+            {/* Section 3: Financials & Status (Always visible, includes Agent in Edit Mode) */}
+            <div className={`space-y-4 ${isEditMode ? 'col-span-2 max-w-2xl mx-auto w-full' : ''}`}>
+              <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2 border-b border-indigo-100 pb-2">التسليم والحسابات</h3>
               
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">المندوب الموزع</label>
+                  <input type="text" value={formData.agent || ''} onChange={e => handleChange('agent', e.target.value)} placeholder="اسم المندوب..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" />
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">العدد</label>
                   <input type="number" value={formData.count || ''} onChange={e => handleChange('count', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm text-center" />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">السعر (الإجمالي)</label>
                   <input type="number" value={formData.total || ''} onChange={e => handleChange('total', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm text-center font-bold text-slate-800" />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">حالة الطلب (الموقف)</label>
-                <select value={formData.status || ''} onChange={e => handleChange('status', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium">
-                  <option value="">-- اختر الحالة --</option>
-                  {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">حالة الطلب (الموقف)</label>
+                  <select value={formData.status || ''} onChange={e => handleChange('status', e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium">
+                    <option value="">-- اختر الحالة --</option>
+                    {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -184,12 +188,12 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
                 </div>
               </div>
 
-            </div>
-          </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">ملاحظات إضافية</label>
+                <textarea value={formData.notes || ''} onChange={e => handleChange('notes', e.target.value)} placeholder="أي ملاحظات تخص الطلب..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm resize-none h-20"></textarea>
+              </div>
 
-          <div className="mt-6">
-            <label className="block text-xs font-semibold text-slate-600 mb-1">ملاحظات إضافية</label>
-            <textarea value={formData.notes || ''} onChange={e => handleChange('notes', e.target.value)} placeholder="أي ملاحظات تخص الطلب..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm resize-none h-20"></textarea>
+            </div>
           </div>
         </div>
 
