@@ -414,7 +414,7 @@ function App() {
       result = result.filter(o => !o.archived && o.date === activeDateTab);
     }
     if (activeTab === 'archive') {
-      result = result.filter(o => o.archived);
+      result = result.filter(o => o.archived && o.date === activeDateTab);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -774,7 +774,15 @@ function App() {
 
   const NavButton = ({ id, icon: Icon, label }) => (
     <button 
-      onClick={() => setActiveTab(id)} 
+      onClick={() => {
+        setActiveTab(id);
+        if (id === 'archive') {
+          const archivedDates = orders.filter(o => o.archived && o.date).map(o => o.date).sort();
+          if (archivedDates.length > 0) setActiveDateTab(archivedDates[0]);
+        } else if (id === 'data-entry') {
+          setActiveDateTab(today());
+        }
+      }} 
       className={`flex items-center rounded-xl transition-all duration-200 ${
         isSidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
       } ${
