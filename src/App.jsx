@@ -710,7 +710,7 @@ function App() {
         };
 
         const importedOrders = data.map(row => {
-          const company = findValue(row, ['الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
+          const company = findValue(row, ['اسم الشحنة', 'اسم الشحنه', 'الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
           const sender = findValue(row, ['الراسل', 'اسم الراسل', 'التاجر', 'التجار', 'sender'])?.toString().trim() || '';
           const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id'])?.toString().trim() || '';
           const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'customer', 'name'])?.toString().trim() || '';
