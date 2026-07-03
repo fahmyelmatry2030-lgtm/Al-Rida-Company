@@ -123,7 +123,6 @@ function App() {
     if (activeTab === 'archive') {
       // Only show dates that actually have archived orders
       const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
-      if (archiveDateTab) archivedDates.add(archiveDateTab);
       return Array.from(archivedDates).sort((a, b) => new Date(a) - new Date(b));
     }
     // data-entry: show last 7 days + any active unarchived order dates
@@ -135,7 +134,7 @@ function App() {
     }
     if (activeDateTab) datesSet.add(activeDateTab);
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
-  }, [activeDateTab, archiveDateTab, orders, activeTab]);
+  }, [activeDateTab, orders, activeTab]);
 
 
   // --- Firebase Sync ---
@@ -1160,50 +1159,6 @@ function App() {
 
             {/* Orders Table — View Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
-
-              {/* Date Tabs — TOP */}
-              <div className="flex items-center bg-slate-100 border-b border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden">
-                <div className="relative flex items-center justify-center min-w-[32px] h-8 bg-white border border-slate-300 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors shadow-sm shrink-0" title="فتح شيت لتاريخ محدد">
-                  <Calendar className="w-4 h-4" />
-                  <input 
-                    type="date" 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        if (activeTab === 'archive') setArchiveDateTab(e.target.value);
-                        else setActiveDateTab(e.target.value);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="w-[1px] h-5 bg-slate-300 mx-1 shrink-0"></div>
-                {dateTabs.length === 0 && activeTab === 'archive' && (
-                  <span className="text-xs text-slate-400 px-3 py-1">لا توجد أيام مرحّلة بعد</span>
-                )}
-                {dateTabs.map(dateStr => {
-                  const parts = dateStr.split('-');
-                  let displayDate = dateStr;
-                  if (parts.length === 3) {
-                    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
-                    const weekday = dateObj.toLocaleDateString('ar-EG', { weekday: 'long' });
-                    displayDate = `${weekday} ${parts[2]}/${parts[1]}`;
-                  }
-                  const isActive = activeTab === 'archive' ? archiveDateTab === dateStr : activeDateTab === dateStr;
-                  return (
-                    <button
-                      key={dateStr}
-                      onClick={() => {
-                        if (activeTab === 'archive') setArchiveDateTab(dateStr);
-                        else setActiveDateTab(dateStr);
-                      }}
-                      className={`px-5 py-2 rounded-t-lg text-sm font-bold transition-all whitespace-nowrap ${isActive ? 'bg-white text-indigo-700 border-t-4 border-indigo-500 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60 border-t-4 border-transparent'}`}
-                    >
-                      {displayDate} {dateStr === today() && <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">اليوم</span>}
-                    </button>
-                  );
-                })}
-              </div>
-
               <div className="overflow-x-auto flex-1 custom-scrollbar" onKeyDown={handleTableKeyDown} onPaste={handleTablePaste} tabIndex="0">
                 <table className="w-full text-sm text-right print:text-xs">
                   <thead className="bg-gradient-to-l from-slate-50 to-slate-100 text-slate-550 font-bold sticky top-0 z-10">
@@ -1440,6 +1395,50 @@ function App() {
                   </select>
                 </div>
               </div>
+
+              {/* Sheet Tabs — BOTTOM */}
+              <div className="flex items-center bg-slate-100 border-t border-slate-200 px-2 py-1.5 gap-1 overflow-x-auto custom-scrollbar print:hidden">
+                <div className="relative flex items-center justify-center min-w-[32px] h-8 bg-white border border-slate-300 rounded-lg text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors shadow-sm shrink-0" title="فتح شيت لتاريخ محدد">
+                  <Calendar className="w-4 h-4" />
+                  <input 
+                    type="date" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        if (activeTab === 'archive') setArchiveDateTab(e.target.value);
+                        else setActiveDateTab(e.target.value);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="w-[1px] h-5 bg-slate-300 mx-1 shrink-0"></div>
+                {dateTabs.length === 0 && activeTab === 'archive' && (
+                  <span className="text-xs text-slate-400 px-3 py-1">لا توجد أيام مرحّلة بعد</span>
+                )}
+                {dateTabs.map(dateStr => {
+                  const parts = dateStr.split('-');
+                  let displayDate = dateStr;
+                  if (parts.length === 3) {
+                    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const weekday = dateObj.toLocaleDateString('ar-EG', { weekday: 'long' });
+                    displayDate = `${weekday} ${parts[2]}/${parts[1]}`;
+                  }
+                  const isActive = activeTab === 'archive' ? archiveDateTab === dateStr : activeDateTab === dateStr;
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => {
+                        if (activeTab === 'archive') setArchiveDateTab(dateStr);
+                        else setActiveDateTab(dateStr);
+                      }}
+                      className={`px-5 py-2 rounded-t-lg text-sm font-bold transition-all whitespace-nowrap ${isActive ? 'bg-white text-indigo-700 border-t-4 border-indigo-500 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60 border-t-4 border-transparent'}`}
+                    >
+                      {displayDate} {dateStr === today() && <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">اليوم</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
             </div>
           </>
         )}
