@@ -51,6 +51,7 @@ function App() {
   const [showSettled, setShowSettled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeDateTab, setActiveDateTab] = useState(today());
+  const [archiveDateTab, setArchiveDateTab] = useState(today());
   const fileInputRef = useRef(null);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -122,6 +123,7 @@ function App() {
     if (activeTab === 'archive') {
       // Only show dates that actually have archived orders
       const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
+      if (archiveDateTab) archivedDates.add(archiveDateTab);
       return Array.from(archivedDates).sort((a, b) => new Date(a) - new Date(b));
     }
     // data-entry: show last 7 days + any active unarchived order dates
@@ -133,7 +135,7 @@ function App() {
     }
     if (activeDateTab) datesSet.add(activeDateTab);
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
-  }, [activeDateTab, orders, activeTab]);
+  }, [activeDateTab, archiveDateTab, orders, activeTab]);
 
 
   // --- Firebase Sync ---
@@ -261,7 +263,7 @@ function App() {
     }
   };
 
-  const deleteRow = async (id) => {
+  const deleteOrder = async (id) => {
     const order = orders.find(o => o.id === id);
     if (order?.settled) return alert('لا يمكن حذف طلب تم تقفيله.');
     if (window.confirm('هل أنت متأكد من مسح هذا الطلب؟')) {
@@ -270,6 +272,39 @@ function App() {
       } catch(err) {
         alert('خطأ: ' + err.message);
       }
+    }
+  };
+
+  const deleteRow = deleteOrder;
+
+  const handleDeleteAllToday = async (ordersToDelete) => {
+    if (ordersToDelete.length === 0) return alert('لا توجد طلبات لحذفها في هذا اليوم.');
+    const activeOrders = ordersToDelete.filter(o => !o.settled);
+    const settledCount = ordersToDelete.length - activeOrders.length;
+    
+    let msg = `هل أنت متأكد من مسح جميع طلبات هذا اليوم (${activeOrders.length} طلب)؟`;
+    if (settledCount > 0) {
+      msg += `\n(تنبيه: سيتم تخطي ${settledCount} طلب لأنها مقفلة بالفعل ولا يمكن حذفها)`;
+    }
+    
+    if (!window.confirm(msg)) return;
+    
+    try {
+      let batch = writeBatch(db);
+      let count = 0;
+      for (const order of activeOrders) {
+        batch.delete(doc(db, 'orders', order.id));
+        count++;
+        if (count === 500) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+      if (count > 0) await batch.commit();
+      alert('تم مسح الطلبات بنجاح!');
+    } catch(err) {
+      alert('خطأ أثناء المسح: ' + err.message);
     }
   };
 
@@ -428,7 +463,7 @@ function App() {
       result = result.filter(o => !o.archived && o.date === activeDateTab);
     }
     if (activeTab === 'archive') {
-      result = result.filter(o => o.archived && o.date === activeDateTab);
+      result = result.filter(o => o.archived && o.date === archiveDateTab);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -446,7 +481,7 @@ function App() {
       const codeB = String(b.code || '');
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab]);
+  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab]);
 
   const handleTableKeyDown = (e) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
@@ -792,9 +827,7 @@ function App() {
         setActiveTab(id);
         if (id === 'archive') {
           const archivedDates = orders.filter(o => o.archived && o.date).map(o => o.date).sort();
-          if (archivedDates.length > 0) setActiveDateTab(archivedDates[0]);
-        } else if (id === 'data-entry') {
-          setActiveDateTab(today());
+          if (archivedDates.length > 0) setArchiveDateTab(archivedDates[0]);
         }
       }} 
       className={`flex items-center rounded-xl transition-all duration-200 ${
@@ -980,13 +1013,22 @@ function App() {
             {activeTab === 'data-entry' && (
               <div className="flex gap-2">
                 {!isAgent && (
-                  <button 
-                    onClick={() => handleArchiveOrders(filteredOrders)} 
-                    className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
-                    title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
-                  >
-                    <Archive className="w-4 h-4" /> ترحيل اليوم
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => handleArchiveOrders(filteredOrders)} 
+                      className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
+                      title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
+                    >
+                      <Archive className="w-4 h-4" /> ترحيل اليوم
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteAllToday(filteredOrders)} 
+                      className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-red-500/25 transition-all active:scale-95"
+                      title="مسح جميع طلبات اليوم دفعة واحدة"
+                    >
+                      <Trash2 className="w-4 h-4" /> مسح الكل
+                    </button>
+                  </>
                 )}
                 <button 
                   onClick={() => setIsQuickDispatchOpen(true)} 
@@ -1127,7 +1169,10 @@ function App() {
                     type="date" 
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     onChange={(e) => {
-                      if (e.target.value) setActiveDateTab(e.target.value);
+                      if (e.target.value) {
+                        if (activeTab === 'archive') setArchiveDateTab(e.target.value);
+                        else setActiveDateTab(e.target.value);
+                      }
                     }}
                   />
                 </div>
@@ -1143,11 +1188,15 @@ function App() {
                     const weekday = dateObj.toLocaleDateString('ar-EG', { weekday: 'long' });
                     displayDate = `${weekday} ${parts[2]}/${parts[1]}`;
                   }
+                  const isActive = activeTab === 'archive' ? archiveDateTab === dateStr : activeDateTab === dateStr;
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => setActiveDateTab(dateStr)}
-                      className={`px-5 py-2 rounded-t-lg text-sm font-bold transition-all whitespace-nowrap ${activeDateTab === dateStr ? 'bg-white text-indigo-700 border-t-4 border-indigo-500 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60 border-t-4 border-transparent'}`}
+                      onClick={() => {
+                        if (activeTab === 'archive') setArchiveDateTab(dateStr);
+                        else setActiveDateTab(dateStr);
+                      }}
+                      className={`px-5 py-2 rounded-t-lg text-sm font-bold transition-all whitespace-nowrap ${isActive ? 'bg-white text-indigo-700 border-t-4 border-indigo-500 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60 border-t-4 border-transparent'}`}
                     >
                       {displayDate} {dateStr === today() && <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">اليوم</span>}
                     </button>
