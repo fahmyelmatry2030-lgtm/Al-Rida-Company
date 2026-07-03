@@ -145,7 +145,28 @@ function App() {
       }
     };
 
-    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => setOrders(snap.docs.map(d => d.data())), handleSyncError);
+    const autoArchivePreviousDays = async (loadedOrders) => {
+      const todayStr = today();
+      const toArchive = loadedOrders.filter(o => !o.archived && o.date && o.date < todayStr);
+      if (toArchive.length === 0) return;
+      try {
+        let batch = writeBatch(db);
+        let count = 0;
+        for (const order of toArchive) {
+          batch.update(doc(db, 'orders', order.id), { archived: true });
+          count++;
+          if (count === 500) { await batch.commit(); batch = writeBatch(db); count = 0; }
+        }
+        if (count > 0) await batch.commit();
+      } catch (e) { console.error('Auto-archive error:', e); }
+    };
+
+    let firstOrdersLoad = true;
+    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
+      const loaded = snap.docs.map(d => d.data());
+      setOrders(loaded);
+      if (firstOrdersLoad) { firstOrdersLoad = false; autoArchivePreviousDays(loaded); }
+    }, handleSyncError);
     const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())), handleSyncError);
     const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())), handleSyncError);
