@@ -119,26 +119,19 @@ function App() {
   const [salaryPayments, setSalaryPayments] = useState([]);
 
   const dateTabs = useMemo(() => {
-    let relevantOrders = orders;
     if (activeTab === 'archive') {
-      relevantOrders = orders.filter(o => o.archived && o.date);
-    } else {
-      relevantOrders = orders.filter(o => !o.archived && o.date);
+      // Only show dates that actually have archived orders
+      const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
+      return Array.from(archivedDates).sort((a, b) => new Date(a) - new Date(b));
     }
-    const datesSet = new Set(relevantOrders.map(o => o.date));
-    
-    // Always include the last 7 days for data-entry
-    if (activeTab !== 'archive') {
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        datesSet.add(d.toISOString().split('T')[0]);
-      }
+    // data-entry: show last 7 days + any active unarchived order dates
+    const datesSet = new Set(orders.filter(o => !o.archived && o.date).map(o => o.date));
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      datesSet.add(d.toISOString().split('T')[0]);
     }
-    
-    if (activeDateTab) {
-      datesSet.add(activeDateTab);
-    }
+    if (activeDateTab) datesSet.add(activeDateTab);
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
   }, [activeDateTab, orders, activeTab]);
 
