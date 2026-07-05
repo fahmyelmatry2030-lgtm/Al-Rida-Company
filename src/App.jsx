@@ -234,15 +234,23 @@ function App() {
   };
 
   const calculateNet = (collected, shippingFee, status) => {
+    const coll = Number(collected);
+    const fee = Number(shippingFee);
+    const safeCollected = isNaN(coll) ? 0 : coll;
+    const safeFee = isNaN(fee) ? 0 : fee;
     const isFeeApplicable = ['تم التسليم', 'جزئي', 'رفض شحن'].includes(status);
-    const feeToDeduct = isFeeApplicable ? (Number(shippingFee) || 0) : 0;
-    return (Number(collected) || 0) - feeToDeduct;
+    const feeToDeduct = isFeeApplicable ? safeFee : 0;
+    return safeCollected - feeToDeduct;
   };
 
   // --- Orders Logic ---
   const handleOrderChange = async (id, field, value) => {
     const order = orders.find(o => o.id === id);
-    if (!order || (order.settled && field !== 'settled')) return;
+    // منع التعديل تماماً لو الطلب متقفل محاسبياً
+    if (order.settled && field !== 'settled') {
+      alert('لا يمكن تعديل طلب تم تقفيله حسابياً.');
+      return;
+    }
     
     let updatedOrder = { ...order, [field]: value };
     if (field === 'status') {
@@ -251,7 +259,7 @@ function App() {
         updatedOrder.collected = 0;
         updatedOrder.shippingFee = 0;
       } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) {
-        updatedOrder.collected = updatedOrder.total;
+        updatedOrder.collected = Number(updatedOrder.total) || 0;
         const merchant = merchants.find(m => m.name === updatedOrder.company);
         updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
         if (value === 'نزول') {
@@ -309,12 +317,17 @@ function App() {
     const activeOrders = ordersToDelete.filter(o => !o.settled);
     const settledCount = ordersToDelete.length - activeOrders.length;
     
-    let msg = `هل أنت متأكد من مسح جميع طلبات هذا اليوم (${activeOrders.length} طلب)؟`;
+    let msg = `تحذير: هل أنت متأكد تماماً من مسح جميع طلبات هذا اليوم (${activeOrders.length} طلب) نهائياً؟\nسيتم حذفها من السيرفر ولا يمكن استرجاعها.`;
     if (settledCount > 0) {
-      msg += `\n(تنبيه: سيتم تخطي ${settledCount} طلب لأنها مقفلة بالفعل ولا يمكن حذفها)`;
+      msg += `\n(سيتم تخطي ${settledCount} طلب لأنها مغلقة/مقفلة بالفعل)`;
     }
     
     if (!window.confirm(msg)) return;
+    const confirmWord = window.prompt("لتأكيد الحذف النهائي، يرجى كتابة كلمة 'حذف' في المربع أدناه:");
+    if (confirmWord !== 'حذف') {
+      alert('تم إلغاء العملية لعدم تطابق كلمة التأكيد.');
+      return;
+    }
     
     try {
       let batch = writeBatch(db);
