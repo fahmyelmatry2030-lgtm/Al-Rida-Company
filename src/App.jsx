@@ -83,6 +83,7 @@ function App() {
   const [bulkDispatchMerchant, setBulkDispatchMerchant] = useState('');
   const [isQuickDispatchOpen, setIsQuickDispatchOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [agentFilterTab, setAgentFilterTab] = useState('pending'); // 'pending' = بانتظار الاستلام, 'received' = عهدة قيد التوصيل
 
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
@@ -356,6 +357,30 @@ function App() {
     }
   };
 
+  const handleConfirmReceipt = async (orderIds, receivedStatus = true) => {
+    try {
+      const ids = Array.isArray(orderIds) ? orderIds : [orderIds];
+      let batch = writeBatch(db);
+      let count = 0;
+      for (const id of ids) {
+        const o = orders.find(x => x.id === id);
+        if (o) {
+          batch.update(doc(db, 'orders', id), { agentReceived: receivedStatus });
+          count++;
+          if (count === 500) {
+            await batch.commit();
+            batch = writeBatch(db);
+            count = 0;
+          }
+        }
+      }
+      if (count > 0) await batch.commit();
+      alert('تم تأكيد استلام عهدة الشحنات بنجاح! 🚚');
+    } catch (err) {
+      alert('خطأ أثناء تأكيد الاستلام: ' + err.message);
+    }
+  };
+
   const handleArchiveOrders = async (ordersToArchive) => {
     if (!window.confirm(`هل أنت متأكد من ترحيل ${ordersToArchive.length} طلب إلى سجل الشحنات؟`)) return;
     try {
@@ -494,8 +519,16 @@ function App() {
   const filteredOrders = useMemo(() => {
     let result = orders;
     // Agent sees only their own orders
+    // Agent sees only their own orders and filters by custody status if on data-entry tab
     if (currentUser?.role === 'agent') {
       result = result.filter(o => o.agent === currentUser.name);
+      if (activeTab === 'data-entry') {
+        if (agentFilterTab === 'pending') {
+          result = result.filter(o => !o.agentReceived);
+        } else {
+          result = result.filter(o => o.agentReceived);
+        }
+      }
     }
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
       result = result.filter(o => o.company === selectedCompany);
@@ -529,7 +562,7 @@ function App() {
       const codeB = String(b.code || '');
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab]);
+  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab, agentFilterTab]);
 
   const handleTableKeyDown = (e) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
@@ -1063,38 +1096,57 @@ function App() {
 
             {activeTab === 'data-entry' && (
               <div className="flex gap-2">
-                {!isAgent && (
-                  <>
+                {isAgent ? (
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
                     <button 
-                      onClick={() => handleArchiveOrders(filteredOrders)} 
-                      className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
-                      title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
+                      onClick={() => { setAgentFilterTab('pending'); setCurrentPage(1); }}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${agentFilterTab === 'pending' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60'}`}
                     >
-                      <Archive className="w-4 h-4" /> ترحيل اليوم
+                      📦 بانتظار الاستلام ({orders.filter(o => o.agent === currentUser.name && !o.archived && o.date === activeDateTab && !o.agentReceived).length})
                     </button>
-                    {isAdmin && (
-                      <button 
-                        onClick={() => handleDeleteAllToday(filteredOrders)} 
-                        className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-red-500/25 transition-all active:scale-95"
-                        title="مسح جميع طلبات اليوم دفعة واحدة"
-                      >
-                        <Trash2 className="w-4 h-4" /> مسح الكل
-                      </button>
+                    <button 
+                      onClick={() => { setAgentFilterTab('received'); setCurrentPage(1); }}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${agentFilterTab === 'received' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/60'}`}
+                    >
+                      🚚 عهدة قيد التوصيل ({orders.filter(o => o.agent === currentUser.name && !o.archived && o.date === activeDateTab && o.agentReceived).length})
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {!isAgent && (
+                      <>
+                        <button 
+                          onClick={() => handleArchiveOrders(filteredOrders)} 
+                          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
+                          title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
+                        >
+                          <Archive className="w-4 h-4" /> ترحيل اليوم
+                        </button>
+                        {isAdmin && (
+                          <button 
+                            onClick={() => handleDeleteAllToday(filteredOrders)} 
+                            className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-red-500/25 transition-all active:scale-95"
+                            title="مسح جميع طلبات اليوم دفعة واحدة"
+                          >
+                            <Trash2 className="w-4 h-4" /> مسح الكل
+                          </button>
+                        )}
+                      </>
                     )}
+                    <button 
+                      onClick={() => setIsQuickDispatchOpen(true)} 
+                      className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95"
+                    >
+                      🚚 توزيع سريع للمناديب
+                    </button>
+                    <button 
+                      onClick={openAddModal} 
+                      className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" /> إضافة طلب
+                    </button>
                   </>
                 )}
-                <button 
-                  onClick={() => setIsQuickDispatchOpen(true)} 
-                  className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95"
-                >
-                  🚚 توزيع سريع للمناديب
-                </button>
-                <button 
-                  onClick={openAddModal} 
-                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 transition-all active:scale-95"
-                >
-                  <Plus className="w-4 h-4" /> إضافة طلب
-                </button>
               </div>
             )}
             {activeTab === 'merchants' && (
@@ -1299,27 +1351,50 @@ function App() {
                           <td className="px-3 py-2 text-center text-slate-700 font-extrabold text-[14px]">{order.count || 1}</td>
                           <td className="px-3 py-2 text-center font-black text-slate-850 text-[15px]">{Number(order.total || 0).toLocaleString()}</td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
-                            <input 
-                              type="text"
-                              value={order.agent || ''} 
-                              onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
-                              disabled={isAgent || activeTab === 'archive'}
-                              placeholder="المندوب"
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                            />
+                            <div className="flex items-center gap-1">
+                              <input 
+                                type="text"
+                                value={order.agent || ''} 
+                                onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
+                                disabled={isAgent || activeTab === 'archive'}
+                                placeholder="المندوب"
+                                className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                              />
+                              {order.agent && activeTab !== 'archive' && (
+                                <span 
+                                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                                    order.agentReceived 
+                                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20' 
+                                      : 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
+                                  }`} 
+                                  title={order.agentReceived ? "العهدة مستلمة مع المندوب" : "بانتظار استلام المندوب للعهدة"}
+                                >
+                                  {order.agentReceived ? '✓' : '?'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                            <select 
-                              value={order.status || ''} 
-                              onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
-                              disabled={activeTab === 'archive'}
-                              className={`border rounded px-2 py-1 text-sm font-extrabold outline-none focus:ring-1 focus:ring-indigo-500 w-24 text-center disabled:opacity-75 ${
-                                STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-205'
-                              }`}
-                            >
-                              <option value="">اختر الحالة...</option>
-                              {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
+                            {isAgent && !order.agentReceived ? (
+                              <button
+                                onClick={() => handleConfirmReceipt(order.id)}
+                                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                              >
+                                📦 استلام العهدة
+                              </button>
+                            ) : (
+                              <select 
+                                value={order.status || ''} 
+                                onChange={(e) => handleOrderChange(order.id, 'status', e.target.value)} 
+                                disabled={activeTab === 'archive' || (isAgent && !order.agentReceived)}
+                                className={`border rounded px-2 py-1 text-sm font-extrabold outline-none focus:ring-1 focus:ring-indigo-500 w-24 text-center disabled:opacity-75 ${
+                                  STATUS_OPTIONS.find(opt => opt.value === order.status)?.color || 'bg-slate-50 text-slate-700 border-slate-205'
+                                }`}
+                              >
+                                <option value="">اختر الحالة...</option>
+                                {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                              </select>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <input 
