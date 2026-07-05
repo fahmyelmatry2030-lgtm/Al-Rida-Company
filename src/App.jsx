@@ -709,11 +709,11 @@ function App() {
     }
   };
 
-  // Salaries
   const employeesList = useMemo(() => {
     return employees.map(emp => {
       const empOrders = orders.filter(o => o.agent === emp.name && emp.name.trim() !== '');
-      const totalCommissions = empOrders.reduce((sum, order) => sum + (Number(order.commission) || 0), 0);
+      const successfulOrders = empOrders.filter(o => o.status === 'تم التسليم' || o.status === 'جزئي');
+      const totalCommissions = successfulOrders.reduce((sum, order) => sum + (Number(order.commission) || 0), 0);
       const netSalary = (Number(emp.baseSalary) || 0) + totalCommissions - (Number(emp.deductions) || 0) - (Number(emp.advances) || 0);
       return { ...emp, ordersCount: empOrders.length, totalCommissions, netSalary };
     });
