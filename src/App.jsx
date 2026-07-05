@@ -129,34 +129,21 @@ function App() {
     // الطلبات والإدخال:
     const datesSet = new Set();
     
-    // 1. إضافة آخر 7 أيام كأيام نشطة افتراضية
+    // 1. إضافة آخر 7 أيام كأيام نشطة افتراضية (دورة الـ 7 أيام الدوارة)
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       datesSet.add(d.toISOString().split('T')[0]);
     }
     
-    // 2. إضافة أي يوم آخر يحتوي على طلبات غير مؤرشفة (نشطة)
+    // 2. إضافة أي يوم آخر يحتوي على طلبات غير مؤرشفة نشطة (لحماية أي بيانات قديمة لم تؤرشف)
     orders.filter(o => !o.archived && o.date).forEach(o => datesSet.add(o.date));
     
-    // 3. نفلتر التواريخ:
-    // - يوم النهارده (today) يظهر دائماً.
-    // - أي يوم آخر يظهر فقط إذا لم يتم أرشفة كل طلباته (يعني لسه لم يترحل بالكامل).
-    // لو يوم تم ترحيله وأرشفته بالكامل، يختفي من هنا ويظهر في السجل فقط.
-    const finalDates = Array.from(datesSet).filter(dateStr => {
-      if (dateStr === today()) return true;
-      // هل يحتوي هذا اليوم على أي طلب غير مؤرشف؟
-      const hasUnarchived = orders.some(o => o.date === dateStr && !o.archived);
-      // إذا كان اليوم خالي تماماً من أي طلبات (حتى مؤرشفة)، نخليه يظهر كـ tab فارغ للعمل
-      const hasAnyOrders = orders.some(o => o.date === dateStr);
-      return hasUnarchived || !hasAnyOrders;
-    });
-
-    if (activeDateTab && !finalDates.includes(activeDateTab)) {
-      finalDates.push(activeDateTab);
+    if (activeDateTab) {
+      datesSet.add(activeDateTab);
     }
 
-    return finalDates.sort((a, b) => new Date(a) - new Date(b));
+    return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
   }, [activeDateTab, orders, activeTab]);
 
 
@@ -169,7 +156,43 @@ function App() {
       }
     };
 
-    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => setOrders(snap.docs.map(d => d.data())), handleSyncError);
+    const autoArchiveRolling7Days = async (loadedOrders) => {
+      const todayObj = new Date();
+      const limitDate = new Date();
+      limitDate.setDate(todayObj.getDate() - 7); // حد الـ 7 أيام
+      const limitStr = limitDate.toISOString().split('T')[0];
+
+      // نأخذ فقط الطلبات غير المؤرشفة والتي تاريخها أقدم من أو يساوي limitStr
+      const toArchive = loadedOrders.filter(o => !o.archived && o.date && o.date <= limitStr);
+      if (toArchive.length === 0) return;
+
+      try {
+        let batch = writeBatch(db);
+        let count = 0;
+        for (const order of toArchive) {
+          batch.update(doc(db, 'orders', order.id), { archived: true });
+          count++;
+          if (count === 500) {
+            await batch.commit();
+            batch = writeBatch(db);
+            count = 0;
+          }
+        }
+        if (count > 0) await batch.commit();
+      } catch (e) {
+        console.error('Rolling auto-archive error:', e);
+      }
+    };
+
+    let firstLoad = true;
+    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
+      const loaded = snap.docs.map(d => d.data());
+      setOrders(loaded);
+      if (firstLoad) {
+        firstLoad = false;
+        autoArchiveRolling7Days(loaded);
+      }
+    }, handleSyncError);
     const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())), handleSyncError);
     const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())), handleSyncError);
