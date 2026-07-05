@@ -1028,6 +1028,15 @@ function App() {
           </button>
         </nav>
         <div className="p-4 border-t border-white/5 shrink-0 flex flex-col gap-3">
+          <a 
+            href="/alrida.apk" 
+            download="alrida.apk"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-650 hover:from-indigo-600 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20 text-xs w-full text-center"
+            title="تنزيل تطبيق أندرويد APK"
+          >
+            <MonitorSmartphone className="w-4 h-4" /> 
+            {!isSidebarCollapsed && 'تنزيل تطبيق أندرويد APK 📱'}
+          </a>
           {!isInstalled && installPrompt && (
             <button onClick={handleInstall} className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20 text-sm w-full">
               <MonitorSmartphone className="w-4 h-4" /> 
