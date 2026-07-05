@@ -125,18 +125,38 @@ function App() {
       const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
       return Array.from(archivedDates).sort((a, b) => new Date(a) - new Date(b));
     }
-    // الطلبات والإدخال: يعرض فقط التواريخ التي تحتوي على طلبات غير مؤرشفة نشطة + اليوم الحالي
-    const datesSet = new Set(orders.filter(o => !o.archived && o.date).map(o => o.date));
-    datesSet.add(today()); // نضمن دائماً وجود تابة اليوم الحالي لإضافة طلبات جديدة
+
+    // الطلبات والإدخال:
+    const datesSet = new Set();
     
-    if (activeDateTab) {
-      // التأكد من أن التابة النشطة الحالية لا تظهر في الطلبات إذا تم ترحيلها بالكامل
-      const hasUnarchived = orders.some(o => o.date === activeDateTab && !o.archived);
-      if (hasUnarchived || activeDateTab === today()) {
-        datesSet.add(activeDateTab);
-      }
+    // 1. إضافة آخر 7 أيام كأيام نشطة افتراضية
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      datesSet.add(d.toISOString().split('T')[0]);
     }
-    return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
+    
+    // 2. إضافة أي يوم آخر يحتوي على طلبات غير مؤرشفة (نشطة)
+    orders.filter(o => !o.archived && o.date).forEach(o => datesSet.add(o.date));
+    
+    // 3. نفلتر التواريخ:
+    // - يوم النهارده (today) يظهر دائماً.
+    // - أي يوم آخر يظهر فقط إذا لم يتم أرشفة كل طلباته (يعني لسه لم يترحل بالكامل).
+    // لو يوم تم ترحيله وأرشفته بالكامل، يختفي من هنا ويظهر في السجل فقط.
+    const finalDates = Array.from(datesSet).filter(dateStr => {
+      if (dateStr === today()) return true;
+      // هل يحتوي هذا اليوم على أي طلب غير مؤرشف؟
+      const hasUnarchived = orders.some(o => o.date === dateStr && !o.archived);
+      // إذا كان اليوم خالي تماماً من أي طلبات (حتى مؤرشفة)، نخليه يظهر كـ tab فارغ للعمل
+      const hasAnyOrders = orders.some(o => o.date === dateStr);
+      return hasUnarchived || !hasAnyOrders;
+    });
+
+    if (activeDateTab && !finalDates.includes(activeDateTab)) {
+      finalDates.push(activeDateTab);
+    }
+
+    return finalDates.sort((a, b) => new Date(a) - new Date(b));
   }, [activeDateTab, orders, activeTab]);
 
 
@@ -149,28 +169,7 @@ function App() {
       }
     };
 
-    const autoArchivePreviousDays = async (loadedOrders) => {
-      const todayStr = today();
-      const toArchive = loadedOrders.filter(o => !o.archived && o.date && o.date < todayStr);
-      if (toArchive.length === 0) return;
-      try {
-        let batch = writeBatch(db);
-        let count = 0;
-        for (const order of toArchive) {
-          batch.update(doc(db, 'orders', order.id), { archived: true });
-          count++;
-          if (count === 500) { await batch.commit(); batch = writeBatch(db); count = 0; }
-        }
-        if (count > 0) await batch.commit();
-      } catch (e) { console.error('Auto-archive error:', e); }
-    };
-
-    let firstOrdersLoad = true;
-    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
-      const loaded = snap.docs.map(d => d.data());
-      setOrders(loaded);
-      if (firstOrdersLoad) { firstOrdersLoad = false; autoArchivePreviousDays(loaded); }
-    }, handleSyncError);
+    const unsubOrders = onSnapshot(collection(db, 'orders'), snap => setOrders(snap.docs.map(d => d.data())), handleSyncError);
     const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())), handleSyncError);
     const unsubAgents = onSnapshot(collection(db, 'agents'), snap => setAgents(snap.docs.map(d => d.data())), handleSyncError);
