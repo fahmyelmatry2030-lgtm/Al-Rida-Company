@@ -299,53 +299,15 @@ function App() {
   };
 
   const deleteOrder = async (id) => {
-    const order = orders.find(o => o.id === id);
-    if (order?.settled) return alert('لا يمكن حذف طلب تم تقفيله.');
-    if (window.confirm('هل أنت متأكد من مسح هذا الطلب؟')) {
-      try {
-        await deleteDoc(doc(db, 'orders', id));
-      } catch(err) {
-        alert('خطأ: ' + err.message);
-      }
-    }
+    alert('عذراً، عملية الحذف معطلة نهائياً في هذا النظام لحماية سلامة البيانات الحسابية.');
+    return;
   };
 
   const deleteRow = deleteOrder;
 
   const handleDeleteAllToday = async (ordersToDelete) => {
-    if (ordersToDelete.length === 0) return alert('لا توجد طلبات لحذفها في هذا اليوم.');
-    const activeOrders = ordersToDelete.filter(o => !o.settled);
-    const settledCount = ordersToDelete.length - activeOrders.length;
-    
-    let msg = `تحذير: هل أنت متأكد تماماً من مسح جميع طلبات هذا اليوم (${activeOrders.length} طلب) نهائياً؟\nسيتم حذفها من السيرفر ولا يمكن استرجاعها.`;
-    if (settledCount > 0) {
-      msg += `\n(سيتم تخطي ${settledCount} طلب لأنها مغلقة/مقفلة بالفعل)`;
-    }
-    
-    if (!window.confirm(msg)) return;
-    const confirmWord = window.prompt("لتأكيد الحذف النهائي، يرجى كتابة كلمة 'حذف' في المربع أدناه:");
-    if (confirmWord !== 'حذف') {
-      alert('تم إلغاء العملية لعدم تطابق كلمة التأكيد.');
-      return;
-    }
-    
-    try {
-      let batch = writeBatch(db);
-      let count = 0;
-      for (const order of activeOrders) {
-        batch.delete(doc(db, 'orders', order.id));
-        count++;
-        if (count === 500) {
-          await batch.commit();
-          batch = writeBatch(db);
-          count = 0;
-        }
-      }
-      if (count > 0) await batch.commit();
-      alert('تم مسح الطلبات بنجاح!');
-    } catch(err) {
-      alert('خطأ أثناء المسح: ' + err.message);
-    }
+    alert('عذراً، مسح الطلبات جماعياً معطل نهائياً لحماية البيانات.');
+    return;
   };
 
   const handleArchiveOrders = async (ordersToArchive) => {
@@ -1063,13 +1025,6 @@ function App() {
                       title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
                     >
                       <Archive className="w-4 h-4" /> ترحيل اليوم
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteAllToday(filteredOrders)} 
-                      className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-red-500/25 transition-all active:scale-95"
-                      title="مسح جميع طلبات اليوم دفعة واحدة"
-                    >
-                      <Trash2 className="w-4 h-4" /> مسح الكل
                     </button>
                   </>
                 )}
@@ -2273,30 +2228,6 @@ function App() {
               className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-emerald-600/10"
             >
               <Printer className="w-3.5 h-3.5" /> طباعة البوالص ({selectedOrderIds.length})
-            </button>
-
-            <button 
-              onClick={async () => {
-                if (window.confirm(`هل أنت متأكد من مسح ${selectedOrderIds.length} طلب محدد نهائياً؟`)) {
-                  try {
-                    let deletedCount = 0;
-                    for (const id of selectedOrderIds) {
-                      const o = orders.find(x => x.id === id);
-                      if (o && !o.settled) {
-                        await deleteDoc(doc(db, 'orders', id));
-                        deletedCount++;
-                      }
-                    }
-                    setSelectedOrderIds([]);
-                    alert(`تم حذف ${deletedCount} طلب بنجاح.`);
-                  } catch(err) {
-                    alert('خطأ أثناء الحذف: ' + err.message);
-                  }
-                }
-              }}
-              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-red-600/10"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> حذف المحدد
             </button>
 
             <button 
