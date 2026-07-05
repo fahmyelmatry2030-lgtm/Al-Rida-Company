@@ -19,15 +19,20 @@ import SalaryPage from './SalaryPage';
 const STATUS_OPTIONS = [
   { label: 'تم التسليم', value: 'تم التسليم', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   { label: 'جزئي', value: 'جزئي', color: 'bg-lime-100 text-lime-700 border-lime-300' },
-  { label: 'لاغي', value: 'لاغي', color: 'bg-red-100 text-red-800 border-red-300' },
-  { label: 'مؤجل', value: 'مؤجل', color: 'bg-amber-100 text-amber-800 border-amber-300' },
-  { label: 'نزول', value: 'نزول', color: 'bg-sky-100 text-sky-800 border-sky-300' },
-  { label: 'بدون شحن', value: 'بدون شحن', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  { label: 'رفض شحن', value: 'رفض شحن', color: 'bg-rose-100 text-rose-800 border-rose-300' },
+  { label: 'رفض وشحن', value: 'رفض وشحن', color: 'bg-rose-100 text-rose-800 border-rose-300' },
+  { label: 'رفض ورفض', value: 'رفض ورفض', color: 'bg-orange-100 text-orange-850 border-orange-300' },
+  { label: 'تبديل', value: 'تبديل', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  { label: 'استرجاع', value: 'استرجاع', color: 'bg-violet-100 text-violet-800 border-violet-300' },
   { label: 'غير متاح', value: 'غير متاح', color: 'bg-slate-200 text-slate-700 border-slate-400' },
-  { label: 'عدم رد', value: 'عدم رد', color: 'bg-gray-200 text-gray-700 border-gray-400' },
+  { label: 'عدم الرد', value: 'عدم الرد', color: 'bg-gray-200 text-gray-700 border-gray-400' },
   { label: 'تهرب', value: 'تهرب', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+  { label: 'لاغي', value: 'لاغي', color: 'bg-red-100 text-red-800 border-red-300' },
+  { label: 'تأجيل', value: 'تأجيل', color: 'bg-amber-100 text-amber-800 border-amber-300' },
   { label: 'اوت زون', value: 'اوت زون', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+  { label: 'نزول', value: 'نزول', color: 'bg-sky-100 text-sky-850 border-sky-300' },
+  { label: 'تدوير', value: 'تدوير', color: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300' },
+  { label: 'مجاش', value: 'مجاش', color: 'bg-zinc-200 text-zinc-700 border-zinc-400' },
+  { label: 'تالف', value: 'تالف', color: 'bg-stone-200 text-stone-700 border-stone-400' },
 ];
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -239,7 +244,7 @@ function App() {
     const fee = Number(shippingFee);
     const safeCollected = isNaN(coll) ? 0 : coll;
     const safeFee = isNaN(fee) ? 0 : fee;
-    const isFeeApplicable = ['تم التسليم', 'جزئي', 'رفض شحن'].includes(status);
+    const isFeeApplicable = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'].includes(status);
     const feeToDeduct = isFeeApplicable ? safeFee : 0;
     return safeCollected - feeToDeduct;
   };
@@ -255,17 +260,19 @@ function App() {
     
     let updatedOrder = { ...order, [field]: value };
     if (field === 'status') {
-      const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
+      const zeroCollectedStatuses = ['غير متاح', 'عدم الرد', 'تهرب', 'لاغي', 'تأجيل', 'اوت زون', 'نزول', 'تدوير', 'مجاش', 'تالف'];
+      const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
       if (zeroCollectedStatuses.includes(value)) {
         updatedOrder.collected = 0;
         updatedOrder.shippingFee = 0;
-      } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) {
-        updatedOrder.collected = Number(updatedOrder.total) || 0;
-        const merchant = merchants.find(m => m.name === updatedOrder.company);
-        updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
         if (value === 'نزول') {
           updatedOrder.date = tomorrow();
         }
+      } else if (activeCommissionStatuses.includes(value)) {
+        // الحالات التي يتم تسليمها أو تحصيلها (تحصل إجمالي الأوردر بالكامل)
+        updatedOrder.collected = Number(updatedOrder.total) || 0;
+        const merchant = merchants.find(m => m.name === updatedOrder.company);
+        updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
       }
     }
     
@@ -753,7 +760,7 @@ function App() {
   const employeesList = useMemo(() => {
     return employees.map(emp => {
       const empOrders = orders.filter(o => o.agent === emp.name && emp.name.trim() !== '');
-      const successfulOrders = empOrders.filter(o => o.status === 'تم التسليم' || o.status === 'جزئي');
+      const successfulOrders = empOrders.filter(o => ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'].includes(o.status));
       const totalCommissions = successfulOrders.reduce((sum, order) => sum + (Number(order.commission) || 0), 0);
       const netSalary = (Number(emp.baseSalary) || 0) + totalCommissions - (Number(emp.deductions) || 0) - (Number(emp.advances) || 0);
       return { ...emp, ordersCount: empOrders.length, totalCommissions, netSalary };
@@ -2271,7 +2278,8 @@ function App() {
                 if (!val) return;
                 if (window.confirm(`هل أنت متأكد من تغيير موقف ${selectedOrderIds.length} طلب إلى "${val}"؟`)) {
                   try {
-                    const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
+                    const zeroCollectedStatuses = ['غير متاح', 'عدم الرد', 'تهرب', 'لاغي', 'تأجيل', 'اوت زون', 'نزول', 'تدوير', 'مجاش', 'تالف'];
+                    const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
                     for (const id of selectedOrderIds) {
                       const o = orders.find(x => x.id === id);
                       if (o && !o.settled) {
@@ -2279,11 +2287,11 @@ function App() {
                         if (zeroCollectedStatuses.includes(val)) {
                           updated.collected = 0;
                           updated.shippingFee = 0;
-                        } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(val)) {
+                          if (val === 'نزول') updated.date = tomorrow();
+                        } else if (activeCommissionStatuses.includes(val)) {
                           updated.collected = o.total;
                           const merchant = merchants.find(m => m.name === o.company);
                           updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 0);
-                          if (val === 'نزول') updated.date = tomorrow();
                         }
                         await setDoc(doc(db, 'orders', id), updated);
                       }

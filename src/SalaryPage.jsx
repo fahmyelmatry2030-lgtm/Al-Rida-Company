@@ -48,7 +48,7 @@ export default function SalaryPage({ employees, orders, currentUser }) {
   const getEmployeeStats = (emp) => {
     const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
     const empOrders = orders.filter(o => o.agent === emp.name && o.date?.startsWith(monthStr));
-    const delivered = empOrders.filter(o => o.status === 'تم التسليم' || o.status === 'جزئي');
+    const delivered = empOrders.filter(o => ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'].includes(o.status));
     const commissions = delivered.reduce((sum, o) => sum + (Number(o.commission) || 0), 0);
     const base = Number(emp.baseSalary) || 0;
     const deductions = Number(emp.deductions) || 0;
