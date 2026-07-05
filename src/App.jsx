@@ -1122,6 +1122,19 @@ function App() {
                   <span className="text-slate-300">—</span>
                   <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="bg-transparent outline-none text-xs" />
                 </div>
+                <button 
+                  onClick={() => {
+                    const to = new Date();
+                    const from = new Date();
+                    from.setDate(from.getDate() - 1);
+                    setFilterDateTo(to.toISOString().split('T')[0]);
+                    setFilterDateFrom(from.toISOString().split('T')[0]);
+                  }}
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-2 rounded-xl transition-all"
+                  title="تحديد آخر يومين تلقائياً"
+                >
+                  آخر يومين 📅
+                </button>
                 <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
                   <input type="checkbox" checked={showSettled} onChange={e => setShowSettled(e.target.checked)} className="rounded border-slate-300 w-3.5 h-3.5" />
                   المقفّل
