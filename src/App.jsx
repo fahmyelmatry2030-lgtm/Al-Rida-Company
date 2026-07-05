@@ -123,7 +123,8 @@ function App() {
     if (activeTab === 'archive') {
       // سجل الشحنات: يعرض فقط التواريخ التي تحتوي على طلبات مؤرشفة فعلاً
       const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
-      return Array.from(archivedDates).sort((a, b) => new Date(a) - new Date(b));
+      // ترتيب من الأحدث للأقدم عشان أحدث يوم يظهر أول
+      return Array.from(archivedDates).sort((a, b) => new Date(b) - new Date(a));
     }
 
     // الطلبات والإدخال:
@@ -157,13 +158,15 @@ function App() {
     };
 
     const autoArchiveRolling7Days = async (loadedOrders) => {
-      const todayObj = new Date();
-      const limitDate = new Date();
-      limitDate.setDate(todayObj.getDate() - 7); // حد الـ 7 أيام
-      const limitStr = limitDate.toISOString().split('T')[0];
+      // نحسب أقدم يوم مسموح يبقى نشط (7 أيام بما فيهم النهارده)
+      // النهارده = اليوم 1، إمبارح = اليوم 2، ... قبل 6 أيام = اليوم 7
+      // أي يوم أقدم من كده (اليوم 8+) يترحل تلقائياً
+      const oldestActiveDate = new Date();
+      oldestActiveDate.setDate(oldestActiveDate.getDate() - 6); // 6 أيام قبل النهارده = 7 أيام إجمالي
+      const limitStr = oldestActiveDate.toISOString().split('T')[0];
 
-      // نأخذ فقط الطلبات غير المؤرشفة والتي تاريخها أقدم من أو يساوي limitStr
-      const toArchive = loadedOrders.filter(o => !o.archived && o.date && o.date <= limitStr);
+      // نأخذ فقط الطلبات غير المؤرشفة والتي تاريخها أقدم من حد الـ 7 أيام (أقدم بشكل صارم)
+      const toArchive = loadedOrders.filter(o => !o.archived && o.date && o.date < limitStr);
       if (toArchive.length === 0) return;
 
       try {
@@ -850,7 +853,7 @@ function App() {
       onClick={() => {
         setActiveTab(id);
         if (id === 'archive') {
-          const archivedDates = orders.filter(o => o.archived && o.date).map(o => o.date).sort();
+          const archivedDates = orders.filter(o => o.archived && o.date).map(o => o.date).sort((a, b) => b.localeCompare(a));
           if (archivedDates.length > 0) setArchiveDateTab(archivedDates[0]);
         }
       }} 
@@ -866,14 +869,17 @@ function App() {
     </button>
   );
 
-  // Dashboard stats cards for data-entry
+  // Dashboard stats cards for data-entry — بيعرض إحصائيات اليوم المختار مش بس النهارده
   const quickStats = useMemo(() => {
-    const todayOrders = orders.filter(o => o.date === today() && !o.settled);
-    const todayDelivered = todayOrders.filter(o => o.status === 'تم التسليم').length;
-    const todayPending = todayOrders.filter(o => !o.status || ['مؤجل', 'نزول', 'غير متاح', 'عدم رد'].includes(o.status)).length;
-    const todayTotal = todayOrders.reduce((s, o) => s + (Number(o.collected) || 0), 0);
-    return { total: todayOrders.length, delivered: todayDelivered, pending: todayPending, collected: todayTotal };
-  }, [orders]);
+    const targetDate = activeTab === 'archive' ? archiveDateTab : activeDateTab;
+    const dayOrders = activeTab === 'archive' 
+      ? orders.filter(o => o.archived && o.date === targetDate)
+      : orders.filter(o => !o.archived && o.date === targetDate);
+    const dayDelivered = dayOrders.filter(o => o.status === 'تم التسليم').length;
+    const dayPending = dayOrders.filter(o => !o.status || ['مؤجل', 'نزول', 'غير متاح', 'عدم رد'].includes(o.status)).length;
+    const dayTotal = dayOrders.reduce((s, o) => s + (Number(o.collected) || 0), 0);
+    return { total: dayOrders.length, delivered: dayDelivered, pending: dayPending, collected: dayTotal };
+  }, [orders, activeDateTab, archiveDateTab, activeTab]);
 
   const handleLogin = (user) => {
     sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -2150,8 +2156,15 @@ function App() {
                       const o = orders.find(x => x.id === id);
                       if (o && !o.settled) {
                         let updated = { ...o, status: val };
-                        if (zeroCollectedStatuses.includes(val)) updated.collected = 0;
-                        else if (['تم التسليم', 'اوت زون', 'نزول'].includes(val)) updated.collected = o.total;
+                        if (zeroCollectedStatuses.includes(val)) {
+                          updated.collected = 0;
+                          updated.shippingFee = 0;
+                        } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(val)) {
+                          updated.collected = o.total;
+                          const merchant = merchants.find(m => m.name === o.company);
+                          updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 0);
+                          if (val === 'نزول') updated.date = tomorrow();
+                        }
                         await setDoc(doc(db, 'orders', id), updated);
                       }
                     }
