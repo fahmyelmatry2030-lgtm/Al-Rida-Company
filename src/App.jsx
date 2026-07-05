@@ -121,18 +121,21 @@ function App() {
 
   const dateTabs = useMemo(() => {
     if (activeTab === 'archive') {
-      // Only show dates that actually have archived orders
+      // سجل الشحنات: يعرض فقط التواريخ التي تحتوي على طلبات مؤرشفة فعلاً
       const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
       return Array.from(archivedDates).sort((a, b) => new Date(a) - new Date(b));
     }
-    // data-entry: show last 7 days + any active unarchived order dates
+    // الطلبات والإدخال: يعرض فقط التواريخ التي تحتوي على طلبات غير مؤرشفة نشطة + اليوم الحالي
     const datesSet = new Set(orders.filter(o => !o.archived && o.date).map(o => o.date));
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      datesSet.add(d.toISOString().split('T')[0]);
+    datesSet.add(today()); // نضمن دائماً وجود تابة اليوم الحالي لإضافة طلبات جديدة
+    
+    if (activeDateTab) {
+      // التأكد من أن التابة النشطة الحالية لا تظهر في الطلبات إذا تم ترحيلها بالكامل
+      const hasUnarchived = orders.some(o => o.date === activeDateTab && !o.archived);
+      if (hasUnarchived || activeDateTab === today()) {
+        datesSet.add(activeDateTab);
+      }
     }
-    if (activeDateTab) datesSet.add(activeDateTab);
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
   }, [activeDateTab, orders, activeTab]);
 
