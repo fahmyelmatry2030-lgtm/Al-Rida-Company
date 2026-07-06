@@ -538,11 +538,11 @@ function App() {
       }
     }
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
-      result = result.filter(o => o.company === selectedCompany);
+      result = result.filter(o => o.company === selectedCompany || o.sender === selectedCompany);
     }
     if (activeTab === 'company-summary') {
-      if (filterDateFrom) result = result.filter(o => o.date >= filterDateFrom);
-      if (filterDateTo) result = result.filter(o => o.date <= filterDateTo);
+      if (filterDateFrom) result = result.filter(o => o.date && o.date >= filterDateFrom);
+      if (filterDateTo) result = result.filter(o => o.date && o.date <= filterDateTo);
     }
     if (activeTab === 'company-summary' && !showSettled) {
       result = result.filter(o => !o.settled);
@@ -871,24 +871,26 @@ function App() {
             returns,
             notes,
             company: company,
-            settled: false
+            settled: false,
+            archived: false
           };
         });
 
         if (importedOrders.length > 0) {
-          // Save all to Firestore using batch to improve performance
+          // تقسيم لباتشات وحفظها بالتوازي لتوفير أقصى سرعة (بدون انتظار متتابع)
           const chunks = [];
           for (let i = 0; i < importedOrders.length; i += 400) {
             chunks.push(importedOrders.slice(i, i + 400));
           }
-          for (const chunk of chunks) {
+          const batchPromises = chunks.map(chunk => {
             const batch = writeBatch(db);
             for (const order of chunk) {
               batch.set(doc(db, 'orders', order.id), order);
             }
-            await batch.commit();
-          }
-          alert(`تم استيراد ${importedOrders.length} طلب بنجاح وحفظهم في قاعدة البيانات.`);
+            return batch.commit();
+          });
+          await Promise.all(batchPromises);
+          alert(`تم استيراد ${importedOrders.length} طلب بنجاح وبسرعة فائقة!`);
         }
       } catch (err) {
         alert('حدث خطأ أثناء استيراد الملف. تأكد أنه ملف إكسيل صحيح.');
