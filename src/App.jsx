@@ -521,7 +521,7 @@ function App() {
   };
 
   // Search & Filter
-  const companiesDropdown = ['الكل', ...new Set([...merchants.map(m => m.name), ...orders.map(o => o.company)].filter(Boolean))];
+  const companiesDropdown = ['الكل', ...new Set(merchants.map(m => m.name).filter(Boolean))];
 
   const filteredOrders = useMemo(() => {
     let result = orders;
