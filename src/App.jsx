@@ -195,6 +195,7 @@ function App() {
 
     let firstLoad = true;
     const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
+      if (isImporting) return; // منع المزامنة اللحظية المزعجة أثناء الاستيراد لمنع التهنيج
       const loaded = snap.docs.map(d => d.data());
       setOrders(loaded);
       if (firstLoad) {
@@ -216,7 +217,7 @@ function App() {
       unsubExpenses(); 
       unsubSalaries(); 
     };
-  }, []);
+  }, [isImporting]);
 
   const migrateFromLocal = async () => {
     if(!window.confirm('هل تريد ترحيل البيانات المحلية إلى Firebase؟ هذا الإجراء سيرفع كل البيانات الموجودة على جهازك لتصبح متاحة للجميع.')) return;
@@ -252,7 +253,6 @@ function App() {
   // --- Orders Logic ---
   const handleOrderChange = async (id, field, value) => {
     const order = orders.find(o => o.id === id);
-    // منع التعديل تماماً لو الطلب متقفل محاسبياً
     if (order.settled && field !== 'settled') {
       alert('لا يمكن تعديل طلب تم تقفيله حسابياً.');
       return;
@@ -269,7 +269,6 @@ function App() {
           updatedOrder.date = tomorrow();
         }
       } else if (activeCommissionStatuses.includes(value)) {
-        // الحالات التي يتم تسليمها أو تحصيلها (تحصل إجمالي الأوردر بالكامل)
         updatedOrder.collected = Number(updatedOrder.total) || 0;
         const merchant = merchants.find(m => m.name === updatedOrder.company);
         updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
@@ -877,11 +876,14 @@ function App() {
         });
 
         if (importedOrders.length > 0) {
+          setIsImporting(true); // تجميد المزامنة اللحظية مؤقتاً لتسريع الواجهة
+          
           // تقسيم لباتشات وحفظها بالتوازي لتوفير أقصى سرعة (بدون انتظار متتابع)
           const chunks = [];
           for (let i = 0; i < importedOrders.length; i += 400) {
             chunks.push(importedOrders.slice(i, i + 400));
           }
+          
           const batchPromises = chunks.map(chunk => {
             const batch = writeBatch(db);
             for (const order of chunk) {
@@ -889,7 +891,21 @@ function App() {
             }
             return batch.commit();
           });
+          
           await Promise.all(batchPromises);
+          
+          // تحديث الحالة المحلية فوراً بشكل مباشر لتظهر البيانات في لحظتها وبدون تهنيج
+          setOrders(prev => {
+            const nextOrders = [...prev];
+            importedOrders.forEach(o => {
+              const idx = nextOrders.findIndex(x => x.id === o.id);
+              if (idx > -1) nextOrders[idx] = o;
+              else nextOrders.push(o);
+            });
+            return nextOrders;
+          });
+          
+          setIsImporting(false); // فك التجميد وإعادة الاتصال بالـ Firebase
           alert(`تم استيراد ${importedOrders.length} طلب بنجاح وبسرعة فائقة!`);
         }
       } catch (err) {

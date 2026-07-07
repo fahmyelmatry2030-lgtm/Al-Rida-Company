@@ -13,6 +13,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function cleanDatabase() {
   const collectionsToClean = ['orders', 'expenses', 'agents', 'salary_payments'];
   
@@ -21,18 +23,21 @@ async function cleanDatabase() {
     try {
       const colRef = collection(db, colName);
       const snapshot = await getDocs(colRef);
-      console.log(`Found ${snapshot.size} documents in ${colName}. deleting in parallel batches...`);
+      console.log(`Found ${snapshot.size} documents in ${colName}. deleting...`);
       
       const docs = snapshot.docs;
-      const chunks = [];
-      for (let i = 0; i < docs.length; i += 100) {
-        chunks.push(docs.slice(i, i + 100));
+      // تقسيم الحذف لباتشات متتالية خفيفة (كل باتش 400 مستند)
+      for (let i = 0; i < docs.length; i += 400) {
+        const chunk = docs.slice(i, i + 400);
+        const batch = writeBatch(db);
+        for (const document of chunk) {
+          batch.delete(doc(db, colName, document.id));
+        }
+        await batch.commit();
+        console.log(`Cleared batch ${Math.floor(i/400) + 1} of ${Math.ceil(docs.length/400)}`);
+        await delay(200); // فاصل زمني لتجنب القفل
       }
       
-      for (const chunk of chunks) {
-        const promises = chunk.map(document => deleteDoc(doc(db, colName, document.id)));
-        await Promise.all(promises);
-      }
       console.log(`Successfully cleared ${colName}.`);
     } catch (e) {
       console.error(`Error cleaning ${colName}:`, e.message);
