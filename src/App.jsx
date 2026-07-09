@@ -41,6 +41,12 @@ const tomorrow = () => {
   d.setDate(d.getDate() + 1);
   return d.toISOString().split('T')[0];
 };
+// أقدم تاريخ يظل نشطاً في «الطلبات والإدخال» (7 أيام شاملة اليوم)
+const getActiveOrdersLimitDate = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 6);
+  return d.toISOString().split('T')[0];
+};
 
 const INITIAL_ORDERS = [
   { id: '1', date: today(), sender: 'البدرشين الاثنين', code: '1', customerName: 'سارة فايق', center: 'شارع زكي بدوي', phone: '1270655688', count: 2, total: 1537, agent: 'ابو ذكري الثلاثاء', status: 'نزول', collected: 1537, commission: 20, returns: '', notes: '', company: 'مليكة جينز', settled: false },
@@ -58,6 +64,7 @@ function App() {
   const [activeDateTab, setActiveDateTab] = useState(today());
   const [archiveDateTab, setArchiveDateTab] = useState(today());
   const fileInputRef = useRef(null);
+  const autoArchiveInProgress = useRef(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -117,6 +124,7 @@ function App() {
   
   // Core Data States
   const [orders, setOrders] = useState([]);
+  const [isImporting, setIsImporting] = useState(false);
 
   const [employees, setEmployees] = useState([]);
 
@@ -133,25 +141,59 @@ function App() {
       return Array.from(archivedDates).sort((a, b) => new Date(b) - new Date(a));
     }
 
-    // الطلبات والإدخال:
+    // الطلبات والإدخال: آخر 7 أيام فقط — ما يخرج من هنا يُرحَّل تلقائياً للسجل
     const datesSet = new Set();
-    
-    // 1. إضافة آخر 7 أيام كأيام نشطة افتراضية (دورة الـ 7 أيام الدوارة)
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       datesSet.add(d.toISOString().split('T')[0]);
     }
-    
-    // 2. إضافة أي يوم آخر يحتوي على طلبات غير مؤرشفة نشطة (لحماية أي بيانات قديمة لم تؤرشف)
-    orders.filter(o => !o.archived && o.date).forEach(o => datesSet.add(o.date));
-    
-    if (activeDateTab) {
-      datesSet.add(activeDateTab);
-    }
+    if (activeDateTab) datesSet.add(activeDateTab);
 
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
-  }, [activeDateTab, orders, activeTab]);
+  }, [activeDateTab, activeTab, orders]);
+
+  // أي يوم خارج نافذة الـ 7 أيام → ترحيل فوري للسجل
+  useEffect(() => {
+    if (isImporting || autoArchiveInProgress.current) return;
+
+    const limitStr = getActiveOrdersLimitDate();
+    const toArchive = orders.filter(o => !o.archived && o.date && o.date < limitStr);
+    if (toArchive.length === 0) return;
+
+    autoArchiveInProgress.current = true;
+    (async () => {
+      try {
+        let batch = writeBatch(db);
+        let count = 0;
+        const archivedDates = new Set();
+        for (const order of toArchive) {
+          batch.update(doc(db, 'orders', order.id), { archived: true });
+          archivedDates.add(order.date);
+          count++;
+          if (count === 500) {
+            await batch.commit();
+            batch = writeBatch(db);
+            count = 0;
+          }
+        }
+        if (count > 0) await batch.commit();
+        const latest = [...archivedDates].sort((a, b) => b.localeCompare(a))[0];
+        if (latest) setArchiveDateTab(latest);
+      } catch (e) {
+        console.error('Auto-archive error:', e);
+      } finally {
+        autoArchiveInProgress.current = false;
+      }
+    })();
+  }, [orders, isImporting]);
+
+  // لو المستخدم على يوم قديم في الطلبات، ارجعه لليوم الحالي
+  useEffect(() => {
+    if (activeTab !== 'data-entry') return;
+    const limitStr = getActiveOrdersLimitDate();
+    if (activeDateTab < limitStr) setActiveDateTab(today());
+  }, [activeTab, activeDateTab]);
 
 
   // --- Firebase Sync ---
@@ -163,45 +205,9 @@ function App() {
       }
     };
 
-    const autoArchiveRolling7Days = async (loadedOrders) => {
-      // نحسب أقدم يوم مسموح يبقى نشط (7 أيام بما فيهم النهارده)
-      // النهارده = اليوم 1، إمبارح = اليوم 2، ... قبل 6 أيام = اليوم 7
-      // أي يوم أقدم من كده (اليوم 8+) يترحل تلقائياً
-      const oldestActiveDate = new Date();
-      oldestActiveDate.setDate(oldestActiveDate.getDate() - 6); // 6 أيام قبل النهارده = 7 أيام إجمالي
-      const limitStr = oldestActiveDate.toISOString().split('T')[0];
-
-      // نأخذ فقط الطلبات غير المؤرشفة والتي تاريخها أقدم من حد الـ 7 أيام (أقدم بشكل صارم)
-      const toArchive = loadedOrders.filter(o => !o.archived && o.date && o.date < limitStr);
-      if (toArchive.length === 0) return;
-
-      try {
-        let batch = writeBatch(db);
-        let count = 0;
-        for (const order of toArchive) {
-          batch.update(doc(db, 'orders', order.id), { archived: true });
-          count++;
-          if (count === 500) {
-            await batch.commit();
-            batch = writeBatch(db);
-            count = 0;
-          }
-        }
-        if (count > 0) await batch.commit();
-      } catch (e) {
-        console.error('Rolling auto-archive error:', e);
-      }
-    };
-
-    let firstLoad = true;
     const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
       if (isImporting) return; // منع المزامنة اللحظية المزعجة أثناء الاستيراد لمنع التهنيج
-      const loaded = snap.docs.map(d => d.data());
-      setOrders(loaded);
-      if (firstLoad) {
-        firstLoad = false;
-        autoArchiveRolling7Days(loaded);
-      }
+      setOrders(snap.docs.map(d => d.data()));
     }, handleSyncError);
     const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())), handleSyncError);
@@ -402,6 +408,8 @@ function App() {
         }
       }
       if (count > 0) await batch.commit();
+      const archivedDate = ordersToArchive[0]?.date;
+      if (archivedDate) setArchiveDateTab(archivedDate);
     } catch(err) {
       alert('خطأ أثناء الترحيل: ' + err.message);
     }
@@ -1152,9 +1160,9 @@ function App() {
                         <button 
                           onClick={() => handleArchiveOrders(filteredOrders)} 
                           className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
-                          title="نقل كل طلبات هذا اليوم إلى سجل الشحنات"
+                          title="نقل طلبات هذا اليوم فوراً إلى سجل الشحنات"
                         >
-                          <Archive className="w-4 h-4" /> ترحيل اليوم
+                          <Archive className="w-4 h-4" /> ترحيل للسجل
                         </button>
                         {isAdmin && (
                           <button 
