@@ -133,15 +133,19 @@ function App() {
   const [expenses, setExpenses] = useState([]);
   const [salaryPayments, setSalaryPayments] = useState([]);
 
+  // ⚡ Performance: فصل الطلبات النشطة عن المؤرشفة مرة واحدة فقط
+  // كل العمليات التانية تشتغل على مجموعة صغيرة بدلاً من 3861+ طلب
+  const activeOrders = useMemo(() => orders.filter(o => !o.archived), [orders]);
+  const archivedOrders = useMemo(() => orders.filter(o => o.archived), [orders]);
+
   const dateTabs = useMemo(() => {
     if (activeTab === 'archive') {
-      // سجل الشحنات: يعرض فقط التواريخ التي تحتوي على طلبات مؤرشفة فعلاً
-      const archivedDates = new Set(orders.filter(o => o.archived && o.date).map(o => o.date));
-      // ترتيب من الأحدث للأقدم عشان أحدث يوم يظهر أول
+      // ⚡ يستخدم archivedOrders المفلترة مسبقاً بدلاً من orders كلها
+      const archivedDates = new Set(archivedOrders.filter(o => o.date).map(o => o.date));
       return Array.from(archivedDates).sort((a, b) => new Date(b) - new Date(a));
     }
 
-    // الطلبات والإدخال: آخر 7 أيام فقط — ما يخرج من هنا يُرحَّل تلقائياً للسجل
+    // الطلبات والإدخال: آخر 7 أيام فقط
     const datesSet = new Set();
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -151,7 +155,7 @@ function App() {
     if (activeDateTab) datesSet.add(activeDateTab);
 
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
-  }, [activeDateTab, activeTab, orders]);
+  }, [activeDateTab, activeTab, archivedOrders]);
 
   // أي يوم خارج نافذة الـ 7 أيام → ترحيل فوري للسجل
   useEffect(() => {
@@ -531,9 +535,20 @@ function App() {
   const companiesDropdown = ['الكل', ...new Set(merchants.map(m => m.name).filter(Boolean))];
 
   const filteredOrders = useMemo(() => {
-    let result = orders;
-    // Agent sees only their own orders
-    // Agent sees only their own orders and filters by custody status if on data-entry tab
+    // ⚡ نبدأ من المجموعة الصغيرة المناسبة للـ tab المفعّل بدلاً من orders كلها
+    let result;
+    if (activeTab === 'data-entry') {
+      // نشطة فقط ليوم محدد — أسرع بكثير من فلترة كل الطلبات
+      result = activeOrders.filter(o => o.date === activeDateTab);
+    } else if (activeTab === 'archive') {
+      // مؤرشفة فقط ليوم محدد
+      result = archivedOrders.filter(o => o.date === archiveDateTab);
+    } else {
+      // company-summary وغيرها: كل الطلبات
+      result = orders;
+    }
+
+    // فلترة المندوب
     if (currentUser?.role === 'agent') {
       result = result.filter(o => o.agent === currentUser.name);
       if (activeTab === 'data-entry') {
@@ -544,6 +559,7 @@ function App() {
         }
       }
     }
+
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
       result = result.filter(o => o.company === selectedCompany || o.sender === selectedCompany);
     }
@@ -554,12 +570,7 @@ function App() {
     if (activeTab === 'company-summary' && !showSettled) {
       result = result.filter(o => !o.settled);
     }
-    if (activeTab === 'data-entry') {
-      result = result.filter(o => !o.archived && o.date === activeDateTab);
-    }
-    if (activeTab === 'archive') {
-      result = result.filter(o => o.archived && o.date === archiveDateTab);
-    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(o => 
@@ -576,7 +587,7 @@ function App() {
       const codeB = String(b.code || '');
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [orders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab, agentFilterTab]);
+  }, [orders, activeOrders, archivedOrders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab, agentFilterTab]);
 
   const handleTableKeyDown = (e) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
@@ -956,17 +967,17 @@ function App() {
     </button>
   );
 
-  // Dashboard stats cards for data-entry — بيعرض إحصائيات اليوم المختار مش بس النهارده
+  // ⚡ Dashboard stats — بيستخدم المجموعات المفلترة مسبقاً
   const quickStats = useMemo(() => {
     const targetDate = activeTab === 'archive' ? archiveDateTab : activeDateTab;
-    const dayOrders = activeTab === 'archive' 
-      ? orders.filter(o => o.archived && o.date === targetDate)
-      : orders.filter(o => !o.archived && o.date === targetDate);
+    // يستخدم activeOrders أو archivedOrders بدلاً من orders كلها
+    const pool = activeTab === 'archive' ? archivedOrders : activeOrders;
+    const dayOrders = pool.filter(o => o.date === targetDate);
     const dayDelivered = dayOrders.filter(o => o.status === 'تم التسليم').length;
     const dayPending = dayOrders.filter(o => !o.status || ['مؤجل', 'نزول', 'غير متاح', 'عدم رد'].includes(o.status)).length;
     const dayTotal = dayOrders.reduce((s, o) => s + (Number(o.collected) || 0), 0);
     return { total: dayOrders.length, delivered: dayDelivered, pending: dayPending, collected: dayTotal };
-  }, [orders, activeDateTab, archiveDateTab, activeTab]);
+  }, [activeOrders, archivedOrders, activeDateTab, archiveDateTab, activeTab]);
 
   const handleLogin = (user) => {
     sessionStorage.setItem('currentUser', JSON.stringify(user));
