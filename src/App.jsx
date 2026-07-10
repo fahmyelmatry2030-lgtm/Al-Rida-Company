@@ -124,7 +124,9 @@ function App() {
   
   // Core Data States
   const [orders, setOrders] = useState([]);
+  // ⚡ isImportingRef: ref بدلاً من state لمنع إعادة تسجيل Firebase listeners في كل استيراد
   const [isImporting, setIsImporting] = useState(false);
+  const isImportingRef = useRef(false);
 
   const [employees, setEmployees] = useState([]);
 
@@ -157,40 +159,39 @@ function App() {
     return Array.from(datesSet).sort((a, b) => new Date(a) - new Date(b));
   }, [activeDateTab, activeTab, archivedOrders]);
 
-  // أي يوم خارج نافذة الـ 7 أيام → ترحيل فوري للسجل
+  // ⚡ AutoArchive مع Debounce: لا يشتغل مع كل snapshot - ينتظر هدوء البيانات أولاً
+  const autoArchiveTimerRef = useRef(null);
   useEffect(() => {
-    if (isImporting || autoArchiveInProgress.current) return;
-
-    const limitStr = getActiveOrdersLimitDate();
-    const toArchive = orders.filter(o => !o.archived && o.date && o.date < limitStr);
-    if (toArchive.length === 0) return;
-
-    autoArchiveInProgress.current = true;
-    (async () => {
-      try {
-        let batch = writeBatch(db);
-        let count = 0;
-        const archivedDates = new Set();
-        for (const order of toArchive) {
-          batch.update(doc(db, 'orders', order.id), { archived: true });
-          archivedDates.add(order.date);
-          count++;
-          if (count === 500) {
-            await batch.commit();
-            batch = writeBatch(db);
-            count = 0;
+    if (autoArchiveTimerRef.current) clearTimeout(autoArchiveTimerRef.current);
+    autoArchiveTimerRef.current = setTimeout(() => {
+      if (isImportingRef.current || autoArchiveInProgress.current) return;
+      const limitStr = getActiveOrdersLimitDate();
+      const toArchive = orders.filter(o => !o.archived && o.date && o.date < limitStr);
+      if (toArchive.length === 0) return;
+      autoArchiveInProgress.current = true;
+      (async () => {
+        try {
+          let batch = writeBatch(db);
+          let count = 0;
+          const archivedDates = new Set();
+          for (const order of toArchive) {
+            batch.update(doc(db, 'orders', order.id), { archived: true });
+            archivedDates.add(order.date);
+            count++;
+            if (count === 500) { await batch.commit(); batch = writeBatch(db); count = 0; }
           }
+          if (count > 0) await batch.commit();
+          const latest = [...archivedDates].sort((a, b) => b.localeCompare(a))[0];
+          if (latest) setArchiveDateTab(latest);
+        } catch (e) {
+          console.error('Auto-archive error:', e);
+        } finally {
+          autoArchiveInProgress.current = false;
         }
-        if (count > 0) await batch.commit();
-        const latest = [...archivedDates].sort((a, b) => b.localeCompare(a))[0];
-        if (latest) setArchiveDateTab(latest);
-      } catch (e) {
-        console.error('Auto-archive error:', e);
-      } finally {
-        autoArchiveInProgress.current = false;
-      }
-    })();
-  }, [orders, isImporting]);
+      })();
+    }, 2000); // ينتظر 2 ثانية بعد آخر تحديث للبيانات
+    return () => clearTimeout(autoArchiveTimerRef.current);
+  }, [orders]);
 
   // لو المستخدم على يوم قديم في الطلبات، ارجعه لليوم الحالي
   useEffect(() => {
@@ -200,17 +201,18 @@ function App() {
   }, [activeTab, activeDateTab]);
 
 
-  // --- Firebase Sync ---
+  // --- Firebase Sync (يُسجَّل مرة واحدة فقط طوال عمر الـ App) ---
   useEffect(() => {
     const handleSyncError = (err) => {
       console.error("Firebase Sync Error: ", err);
       if (err.code === 'permission-denied') {
-        alert("تنبيه هام: تم رفض الوصول لقاعدة البيانات. يرجى التأكد من تغيير قواعد حماية Firestore (Rules) في لوحة تحكم Firebase لتصبح:\n\nallow read, write: if true;\n\nبدون ذلك، لن يتم حفظ أو مزامنة أي بيانات!");
+        alert("تنبيه هام: تم رفض الوصول لقاعدة البيانات.");
       }
     };
 
     const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
-      if (isImporting) return; // منع المزامنة اللحظية المزعجة أثناء الاستيراد لمنع التهنيج
+      // ⚡ isImportingRef (ref لا يسبب re-render) بدلاً من isImporting (state)
+      if (isImportingRef.current) return;
       setOrders(snap.docs.map(d => d.data()));
     }, handleSyncError);
     const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
@@ -227,7 +229,7 @@ function App() {
       unsubExpenses(); 
       unsubSalaries(); 
     };
-  }, [isImporting]);
+  }, []); // [] = يُسجَّل مرة واحدة فقط عند التحميل ولا يعيد الاتصال أبداً
 
   const migrateFromLocal = async () => {
     if(!window.confirm('هل تريد ترحيل البيانات المحلية إلى Firebase؟ هذا الإجراء سيرفع كل البيانات الموجودة على جهازك لتصبح متاحة للجميع.')) return;
@@ -895,9 +897,11 @@ function App() {
         });
 
         if (importedOrders.length > 0) {
-          setIsImporting(true); // تجميد المزامنة اللحظية مؤقتاً لتسريع الواجهة
+          // ⚡ نستخدم الـ ref لتجميد الـ Firebase snapshot بدون إعادة تسجيل الـ listeners
+          isImportingRef.current = true;
+          setIsImporting(true);
           
-          // تقسيم لباتشات وحفظها بالتوازي لتوفير أقصى سرعة (بدون انتظار متتابع)
+          // تقسيم لباتشات وحفظها بالتوازي (500 حد Firebase الأقصى)
           const chunks = [];
           for (let i = 0; i < importedOrders.length; i += 400) {
             chunks.push(importedOrders.slice(i, i + 400));
@@ -913,19 +917,17 @@ function App() {
           
           await Promise.all(batchPromises);
           
-          // تحديث الحالة المحلية فوراً بشكل مباشر لتظهر البيانات في لحظتها وبدون تهنيج
+          // تحديث الحالة المحلية فوراً بدون انتظار Firebase snapshot
           setOrders(prev => {
-            const nextOrders = [...prev];
-            importedOrders.forEach(o => {
-              const idx = nextOrders.findIndex(x => x.id === o.id);
-              if (idx > -1) nextOrders[idx] = o;
-              else nextOrders.push(o);
-            });
-            return nextOrders;
+            const map = new Map(prev.map(o => [o.id, o]));
+            importedOrders.forEach(o => map.set(o.id, o));
+            return Array.from(map.values());
           });
           
-          setIsImporting(false); // فك التجميد وإعادة الاتصال بالـ Firebase
-          alert(`تم استيراد ${importedOrders.length} طلب بنجاح وبسرعة فائقة!`);
+          // فك التجميد
+          isImportingRef.current = false;
+          setIsImporting(false);
+          alert(`تم استيراد ${importedOrders.length} طلب بنجاح!`);
         }
       } catch (err) {
         alert('حدث خطأ أثناء استيراد الملف. تأكد أنه ملف إكسيل صحيح.');
