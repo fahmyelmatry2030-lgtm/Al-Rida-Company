@@ -200,6 +200,18 @@ function App() {
     if (activeDateTab < limitStr) setActiveDateTab(today());
   }, [activeTab, activeDateTab]);
 
+  // ⚡ عند فتح السجل، حدد تلقائياً أحدث يوم به شحنات مؤرشفة بدلاً من اليوم الخالي
+  useEffect(() => {
+    if (activeTab !== 'archive') return;
+    const archivedDates = archivedOrders.map(o => o.date).filter(Boolean).sort((a, b) => b.localeCompare(a));
+    if (archivedDates.length > 0) {
+      // لو التاريخ الحالي غير موجود في قائمة التواريخ المؤرشفة، اختر الأحدث تلقائياً
+      if (!archivedDates.includes(archiveDateTab)) {
+        setArchiveDateTab(archivedDates[0]);
+      }
+    }
+  }, [activeTab, archivedOrders, archiveDateTab]);
+
 
   // --- Firebase Sync (يُسجَّل مرة واحدة فقط طوال عمر الـ App) ---
   useEffect(() => {
