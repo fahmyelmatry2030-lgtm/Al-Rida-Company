@@ -992,7 +992,7 @@ function App() {
           if (!o.id) o.id = Math.random().toString(36).substr(2, 9);
           if (o.archived === 'TRUE' || o.archived === true) o.archived = true;
           if (o.archived === 'FALSE' || o.archived === false || !o.archived) o.archived = false;
-          if (isAgent || isMerchant) o.company = user?.company || 'الكل';
+          if (isAgent || isMerchant) o.company = currentUser?.company || 'الكل';
           return o;
         });
 
