@@ -10,7 +10,7 @@ import LoginPage from './LoginPage';
 import UsersPage from './UsersPage';
 import BarcodeScanner from './BarcodeScanner';
 import { setupDefaultAdmin } from './setupUsers';
-import { UserCog, ScanLine } from 'lucide-react';
+import { UserCog, ScanLine, Settings } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { MerchantModal, AgentModal, ExpenseModal, EmployeeModal } from './EntityModals';
