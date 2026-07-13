@@ -134,6 +134,13 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [salaryPayments, setSalaryPayments] = useState([]);
+  
+  // Google Sheets Sync State
+  const [googleSheetUrl, setGoogleSheetUrl] = useState(localStorage.getItem('googleSheetUrl') || '');
+  
+  useEffect(() => {
+    localStorage.setItem('googleSheetUrl', googleSheetUrl);
+  }, [googleSheetUrl]);
 
   // ⚡ Performance: فصل الطلبات النشطة عن المؤرشفة مرة واحدة فقط
   // كل العمليات التانية تشتغل على مجموعة صغيرة بدلاً من 3861+ طلب
@@ -274,6 +281,16 @@ function App() {
     return safeCollected - feeToDeduct;
   };
 
+  // --- Google Sheets Sync Helper ---
+  const syncToGoogleSheets = (order, action = 'sync') => {
+    if (!googleSheetUrl) return;
+    fetch(googleSheetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, order: order })
+    }).catch(err => console.error('Google Sheets sync error:', err));
+  };
+
   // --- Orders Logic ---
   const handleOrderChange = async (id, field, value) => {
     const order = orders.find(o => o.id === id);
@@ -301,6 +318,7 @@ function App() {
     
     try {
       await setDoc(doc(db, 'orders', id), updatedOrder);
+      syncToGoogleSheets(updatedOrder);
     } catch(err) {
       alert('خطأ في التحديث: ' + err.message);
     }
@@ -324,6 +342,7 @@ function App() {
   const handleSaveOrder = async (savedOrder) => {
     try {
       await setDoc(doc(db, 'orders', savedOrder.id), savedOrder);
+      syncToGoogleSheets(savedOrder);
     } catch(err) {
       alert('خطأ: ' + err.message);
     }
@@ -913,40 +932,106 @@ function App() {
           isImportingRef.current = true;
           setIsImporting(true);
           
-          // تقسيم لباتشات وحفظها بالتوازي (500 حد Firebase الأقصى)
-          const chunks = [];
-          for (let i = 0; i < importedOrders.length; i += 400) {
-            chunks.push(importedOrders.slice(i, i + 400));
-          }
-          
-          const batchPromises = chunks.map(chunk => {
-            const batch = writeBatch(db);
-            for (const order of chunk) {
-              batch.set(doc(db, 'orders', order.id), order);
-            }
-            return batch.commit();
-          });
-          
-          await Promise.all(batchPromises);
-          
-          // تحديث الحالة المحلية فوراً بدون انتظار Firebase snapshot
+          // تحديث الحالة المحلية فوراً ليتمكن المستخدم من العمل بدون انتظار السيرفر
           setOrders(prev => {
             const map = new Map(prev.map(o => [o.id, o]));
             importedOrders.forEach(o => map.set(o.id, o));
             return Array.from(map.values());
           });
+
+          // فك التجميد فوراً لتستجيب الواجهة
+          setTimeout(() => {
+            isImportingRef.current = false;
+            setIsImporting(false);
+          }, 500);
           
-          // فك التجميد
-          isImportingRef.current = false;
-          setIsImporting(false);
-          alert(`تم استيراد ${importedOrders.length} طلب بنجاح!`);
+          alert(`جاري حفظ ${importedOrders.length} طلب في الخلفية. يمكنك متابعة العمل فوراً!`);
+          
+          // تقسيم لباتشات ورفعها في الخلفية
+          const chunks = [];
+          for (let i = 0; i < importedOrders.length; i += 400) {
+            chunks.push(importedOrders.slice(i, i + 400));
+          }
+          
+          // رفع في الخلفية دون تعطيل الواجهة بـ await
+          Promise.all(chunks.map(chunk => {
+            const batch = writeBatch(db);
+            for (const order of chunk) {
+              batch.set(doc(db, 'orders', order.id), order);
+            }
+            return batch.commit();
+          })).catch(err => {
+            console.error("Batch upload error:", err);
+            // لا نزعج المستخدم إلا لو حدث خطأ كبير
+          });
         }
       } catch (err) {
         alert('حدث خطأ أثناء استيراد الملف. تأكد أنه ملف إكسيل صحيح.');
       }
-      e.target.value = '';
     };
     reader.readAsBinaryString(file);
+  };
+
+  const importFromGoogleSheetDirectly = async () => {
+    let url = localStorage.getItem('merchantGoogleSheetUrl');
+    if (!url) {
+      url = window.prompt('يرجى وضع رابط جوجل شيت (Web App URL) الخاص بك هنا:');
+      if (url) localStorage.setItem('merchantGoogleSheetUrl', url);
+    }
+    
+    if (!url) return;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.orders && data.orders.length > 0) {
+        const confirmImport = window.confirm(`تم العثور على ${data.orders.length} شحنة في الشيت. هل تريد سحبهم للنظام الآن؟`);
+        if(!confirmImport) return;
+        
+        const importedOrders = data.orders.map(o => {
+          if (!o.id) o.id = Math.random().toString(36).substr(2, 9);
+          if (o.archived === 'TRUE' || o.archived === true) o.archived = true;
+          if (o.archived === 'FALSE' || o.archived === false || !o.archived) o.archived = false;
+          if (isAgent || isMerchant) o.company = user?.company || 'الكل';
+          return o;
+        });
+
+        isImportingRef.current = true;
+        setIsImporting(true);
+        
+        setOrders(prev => {
+          const map = new Map(prev.map(order => [order.id, order]));
+          importedOrders.forEach(order => map.set(order.id, order));
+          return Array.from(map.values());
+        });
+        
+        isImportingRef.current = false;
+        setIsImporting(false);
+        
+        alert(`جاري حفظ ${importedOrders.length} طلب في الخلفية. يمكنك متابعة العمل فوراً!`);
+        
+        const chunks = [];
+        for (let i = 0; i < importedOrders.length; i += 400) {
+          chunks.push(importedOrders.slice(i, i + 400));
+        }
+        
+        Promise.all(chunks.map(chunk => {
+          const batch = writeBatch(db);
+          chunk.forEach(o => {
+            batch.set(doc(db, 'orders', String(o.id)), o);
+          });
+          return batch.commit();
+        })).catch(err => console.error("Batch upload error:", err));
+
+      } else {
+        alert('الشيت فارغ أو لا يحتوي على شحنات صالحة.');
+      }
+    } catch (e) {
+      alert('خطأ في سحب الشيت. تأكد أن الرابط صحيح.');
+      if(window.confirm('هل تريد تغيير الرابط المحفوظ ومحاولة إدخال رابط جديد؟')) {
+         localStorage.removeItem('merchantGoogleSheetUrl');
+      }
+    }
   };
 
   // Status Badge
@@ -1063,27 +1148,7 @@ function App() {
           {isAdmin && <NavButton id="expenses" icon={Receipt} label="الخزينة" />}
           <div className="my-2 border-t border-white/5"></div>
           {isAdmin && <NavButton id="users" icon={UserCog} label="المستخدمون" />}
-          <div className="my-2 border-t border-white/5"></div>
-          <button 
-            onClick={() => setShowScanner(true)} 
-            className={`flex items-center rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5 ${
-              isSidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
-            }`}
-            title="ماسح الباركود"
-          >
-            <ScanLine className="w-5 h-5" /> 
-            {!isSidebarCollapsed && <span className="font-medium">ماسح الباركود</span>}
-          </button>
-          <button 
-            onClick={() => setShowTracking(true)} 
-            className={`flex items-center rounded-xl transition-all duration-200 text-white/60 hover:text-white/90 hover:bg-white/5 ${
-              isSidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
-            }`}
-            title="تتبع الشحنات"
-          >
-            <Eye className="w-5 h-5" /> 
-            {!isSidebarCollapsed && <span className="font-medium">تتبع الشحنات</span>}
-          </button>
+          {isAdmin && <NavButton id="integrations" icon={Settings} label="الربط والإعدادات" />}
         </nav>
         <div className="p-4 border-t border-white/5 shrink-0 flex flex-col gap-3">
           <a 
@@ -1147,6 +1212,7 @@ function App() {
               {activeTab === 'salaries' && 'إدارة المرتبات'}
               {activeTab === 'expenses' && 'الخزينة والمصروفات'}
               {activeTab === 'users' && 'إدارة المستخدمين'}
+              {activeTab === 'integrations' && 'الربط والإعدادات'}
             </h2>
             <p className="text-sm text-slate-400 mt-0.5">{new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
@@ -1276,9 +1342,13 @@ function App() {
                 {activeTab !== 'archive' && (
                   <>
                     <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium shadow-sm transition-colors">
-                      <Upload className="w-3.5 h-3.5" /> استيراد
+                      <Upload className="w-3.5 h-3.5" /> إكسيل
                     </button>
                     <input type="file" ref={fileInputRef} onChange={importOrdersFromExcel} accept=".xlsx, .xls" className="hidden" />
+                    
+                    <button onClick={importFromGoogleSheetDirectly} className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors">
+                      <FileSpreadsheet className="w-3.5 h-3.5" /> شيت
+                    </button>
                   </>
                 )}
                 <button onClick={exportOrdersToExcel} className="flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium shadow-sm transition-colors">
@@ -2090,9 +2160,87 @@ function App() {
         )}
 
 
+        {/* ============ INTEGRATIONS & SETTINGS (NEW) ============ */}
+        {activeTab === 'integrations' && isAdmin && (
+          <div className="space-y-6 print:hidden">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm flex flex-col gap-4">
+              <h2 className="text-xl font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                <Settings className="w-6 h-6 text-indigo-500" />
+                إعدادات الربط بجوجل شيت
+              </h2>
+              <div className="text-sm text-slate-600 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                <p>1. قم بإنشاء ملف Google Sheet جديد ثم اذهب إلى <strong>Extensions &gt; Apps Script</strong>.</p>
+                <p>2. الصق الكود الذي تم تزويدك به، ثم اختر <strong>Deploy &gt; New deployment</strong>.</p>
+                <p>3. اختر "Web app" وحدد Access للجميع (Anyone) لكي يعمل بشكل صحيح.</p>
+                <p>4. انسخ الرابط المولد (Web App URL) وضعه في الحقل أدناه.</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-bold text-slate-700">رابط جوجل شيت (Web App URL)</label>
+                <input 
+                  type="text" 
+                  value={googleSheetUrl}
+                  onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className="px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none w-full"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="flex gap-4 flex-wrap mt-4">
+                <button 
+                  onClick={() => {
+                    if(!googleSheetUrl) return alert('يرجى إدخال الرابط أولاً');
+                    if(!window.confirm('هل أنت متأكد من تصدير جميع الشحنات الحالية إلى الشيت؟ سيتم مسح بيانات الشيت وكتابة البيانات الحالية من النظام.')) return;
+                    
+                    fetch(googleSheetUrl, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                      body: JSON.stringify({ action: 'export_to_sheet', orders: orders })
+                    })
+                    .then(() => alert('تم تصدير البيانات للشيت بنجاح!'))
+                    .catch(e => alert('خطأ أثناء التصدير: ' + e.message));
+                  }}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex-1 flex justify-center items-center gap-2 hover:bg-indigo-700 transition"
+                >
+                  <Upload className="w-5 h-5" /> تصدير كل الشحنات للشيت
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    if(!googleSheetUrl) return alert('يرجى إدخال الرابط أولاً');
+                    
+                    fetch(googleSheetUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                      if(data.orders && data.orders.length > 0) {
+                        const confirmImport = window.confirm(`تم سحب ${data.orders.length} شحنة من الشيت. هل تريد دمجهم في النظام الآن؟`);
+                        if(confirmImport) {
+                          data.orders.forEach(o => {
+                            if (!o.id) o.id = Math.random().toString(36).substr(2, 9);
+                            if (o.archived === 'TRUE' || o.archived === true) o.archived = true;
+                            if (o.archived === 'FALSE' || o.archived === false || !o.archived) o.archived = false;
+                            setDoc(doc(db, 'orders', String(o.id)), o);
+                          });
+                          alert('تم دمج الشحنات بنجاح!');
+                        }
+                      } else {
+                        alert('لم يتم العثور على شحنات صالحة في الشيت.');
+                      }
+                    })
+                    .catch(e => alert('خطأ في الاتصال: ' + e.message));
+                  }}
+                  className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold flex-1 flex justify-center items-center gap-2 hover:bg-emerald-700 transition"
+                >
+                  <Download className="w-5 h-5" /> سحب البيانات من الشيت
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ============ USERS ============ */}
-        {activeTab === 'users' && (
-          <UsersPage currentUser={currentUser} />
+        {activeTab === 'users' && isAdmin && (        <UsersPage currentUser={currentUser} />
         )}
 
       </main>
