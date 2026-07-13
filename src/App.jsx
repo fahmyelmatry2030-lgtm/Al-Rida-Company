@@ -53,6 +53,61 @@ const INITIAL_ORDERS = [
   { id: '2', date: today(), sender: 'البدرشين الاثنين', code: '2', customerName: 'اسراء احمد', center: 'ليدين شعبان ميا', phone: '1222278011', count: 2, total: 1537, agent: 'سكر الاثنين', status: 'تم التسليم', collected: 1537, commission: 20, returns: '', notes: '', company: 'مليكة جينز', settled: false },
 ];
 
+const EditableCell = ({ value, onChange, type = "text", placeholder = "", className = "", disabled = false, minWidth }) => {
+  const [localValue, setLocalValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setLocalValue(value || '');
+  }, [value, isEditing]);
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    const trimmed = type === 'text' ? String(localValue).trim() : localValue;
+    if (trimmed !== (value || '')) {
+      onChange(trimmed);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+      const td = e.target.closest('td');
+      const tr = e.target.closest('tr');
+      if (td && tr) {
+        const cellIndex = Array.from(tr.children).indexOf(td);
+        const nextTr = tr.nextElementSibling;
+        if (nextTr) {
+          const nextTd = nextTr.children[cellIndex];
+          if (nextTd) {
+            const nextInput = nextTd.querySelector('input');
+            if (nextInput) setTimeout(() => nextInput.focus(), 10);
+          }
+        }
+      }
+    }
+    if (e.key === 'Escape') {
+      setLocalValue(value || '');
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <input
+      type={type}
+      value={localValue}
+      onChange={(e) => { setLocalValue(e.target.value); setIsEditing(true); }}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      disabled={disabled}
+      placeholder={placeholder}
+      style={{ minWidth }}
+      onClick={(e) => e.stopPropagation()}
+      className={`border border-transparent hover:border-slate-300 focus:border-indigo-500 rounded px-1.5 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-transparent focus:bg-white transition-all w-full disabled:bg-transparent disabled:text-slate-500 disabled:border-transparent ${className}`}
+    />
+  );
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCompany, setSelectedCompany] = useState('الكل');
@@ -128,6 +183,31 @@ function App() {
   const [isImporting, setIsImporting] = useState(false);
   const isImportingRef = useRef(false);
 
+  const performBatchUpdate = async (ids, updateFn) => {
+    if (ids.length === 0) return;
+    setIsImporting(true);
+    isImportingRef.current = true;
+    try {
+      const chunks = [];
+      for (let i = 0; i < ids.length; i += 500) {
+        chunks.push(ids.slice(i, i + 500));
+      }
+      for (const chunk of chunks) {
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          const o = orders.find(x => x.id === id);
+          if (o && !o.settled) {
+            const updated = updateFn(o);
+            if (updated) batch.update(doc(db, 'orders', id), updated);
+          }
+        });
+        await batch.commit();
+      }
+    } finally {
+      setIsImporting(false);
+      isImportingRef.current = false;
+    }
+  };
   const [employees, setEmployees] = useState([]);
 
   const [merchants, setMerchants] = useState([]);
@@ -230,9 +310,34 @@ function App() {
     };
 
     const unsubOrders = onSnapshot(collection(db, 'orders'), snap => {
-      // ⚡ isImportingRef (ref لا يسبب re-render) بدلاً من isImporting (state)
       if (isImportingRef.current) return;
-      setOrders(snap.docs.map(d => d.data()));
+      
+      setOrders(prev => {
+        // إذا كان التحميل لأول مرة أو التغيير كبير جداً (مثل استيراد ضخم)، نحمل كل شيء لضمان صحة البيانات
+        if (prev.length === 0 || snap.docChanges().length > 500) {
+          return snap.docs.map(d => d.data());
+        }
+
+        const next = [...prev];
+        let hasChanges = false;
+
+        snap.docChanges().forEach(change => {
+          hasChanges = true;
+          const data = change.doc.data();
+          const idx = next.findIndex(o => o.id === data.id);
+          
+          if (change.type === 'added') {
+            if (idx === -1) next.push(data);
+          } else if (change.type === 'modified') {
+            if (idx !== -1) next[idx] = data;
+            else next.push(data);
+          } else if (change.type === 'removed') {
+            if (idx !== -1) next.splice(idx, 1);
+          }
+        });
+
+        return hasChanges ? next : prev;
+      });
     }, handleSyncError);
     const unsubEmployees = onSnapshot(collection(db, 'employees'), snap => setEmployees(snap.docs.map(d => d.data())), handleSyncError);
     const unsubMerchants = onSnapshot(collection(db, 'merchants'), snap => setMerchants(snap.docs.map(d => d.data())), handleSyncError);
@@ -1468,16 +1573,11 @@ function App() {
                             </td>
                           )}
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                            <input 
-                              key={order.id + '-review-' + (order.review || '')}
-                              type="text" 
-                              defaultValue={order.review || ''} 
+                            <EditableCell 
+                              value={order.review || ''} 
+                              onChange={(val) => handleOrderChange(order.id, 'review', val)}
                               disabled={isAgent || activeTab === 'archive'}
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val !== (order.review || '')) handleOrderChange(order.id, 'review', val);
-                              }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 w-14 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                              className="w-14 text-center"
                             />
                           </td>
                           <td className="px-3 py-2 text-slate-800 font-semibold whitespace-normal break-words max-w-[150px] text-[14px]">{order.sender || '—'}</td>
@@ -1489,13 +1589,12 @@ function App() {
                           <td className="px-3 py-2 text-center font-black text-slate-850 text-[15px]">{Number(order.total || 0).toLocaleString()}</td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
-                              <input 
-                                type="text"
+                              <EditableCell 
                                 value={order.agent || ''} 
-                                onChange={(e) => handleOrderChange(order.id, 'agent', e.target.value)} 
+                                onChange={(val) => handleOrderChange(order.id, 'agent', val)}
                                 disabled={isAgent || activeTab === 'archive'}
                                 placeholder="المندوب"
-                                className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500 bg-white w-28 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                className="w-28"
                               />
                               {order.agent && activeTab !== 'archive' && (
                                 <span 
@@ -1534,32 +1633,23 @@ function App() {
                             )}
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                            <input 
-                              key={order.id + '-collected-' + (order.collected || 0)}
-                              type="number" 
-                              defaultValue={order.collected || 0} 
+                            <EditableCell 
+                              type="number"
+                              value={order.collected || 0} 
+                              onChange={(val) => handleOrderChange(order.id, 'collected', Number(val) || 0)}
                               disabled={activeTab === 'archive'}
-                              onBlur={(e) => {
-                                const val = Number(e.target.value) || 0;
-                                if (val !== order.collected) handleOrderChange(order.id, 'collected', val);
-                              }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-extrabold text-slate-800 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                              className="w-16 text-center font-extrabold text-slate-800"
                             />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                             <div className="flex gap-1 justify-center">
                               {/* Commission (Shipping Fee) */}
-                              <input 
-                                key={order.id + '-shippingFee-' + (order.shippingFee !== undefined ? order.shippingFee : '')}
-                                type="number" 
-                                defaultValue={order.shippingFee !== undefined ? order.shippingFee : (order.commission !== undefined ? order.commission : (merchants.find(m => m.name === order.company)?.rate || 0))} 
+                              <EditableCell 
+                                type="number"
+                                value={order.shippingFee !== undefined ? order.shippingFee : (order.commission !== undefined ? order.commission : (merchants.find(m => m.name === order.company)?.rate || 0))} 
+                                onChange={(val) => handleOrderChange(order.id, 'shippingFee', Number(val) || 0)}
                                 disabled={isAgent || activeTab === 'archive'}
-                                onBlur={(e) => {
-                                  const val = Number(e.target.value) || 0;
-                                  if (val !== order.shippingFee) handleOrderChange(order.id, 'shippingFee', val);
-                                }}
-                                className="border border-slate-250 rounded px-1 py-1 text-xs font-bold text-indigo-650 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                                title="العمولة"
+                                className="w-16 text-center font-bold text-indigo-650"
                                 placeholder="العمولة"
                               />
                             </div>
@@ -1571,29 +1661,19 @@ function App() {
                             })()}
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                            <input 
-                              key={order.id + '-returns-' + (order.returns || '')}
-                              type="text" 
-                              defaultValue={order.returns || ''} 
+                            <EditableCell 
+                              value={order.returns || ''} 
+                              onChange={(val) => handleOrderChange(order.id, 'returns', val)}
                               disabled={activeTab === 'archive'}
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val !== (order.returns || '')) handleOrderChange(order.id, 'returns', val);
-                              }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-700 w-16 text-center outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                              className="w-16 text-center text-slate-700"
                             />
                           </td>
                           <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
-                            <input 
-                              key={order.id + '-notes-' + (order.notes || '')}
-                              type="text" 
-                              defaultValue={order.notes || ''} 
+                            <EditableCell 
+                              value={order.notes || ''} 
+                              onChange={(val) => handleOrderChange(order.id, 'notes', val)}
                               disabled={activeTab === 'archive'}
-                              onBlur={(e) => {
-                                const val = e.target.value.trim();
-                                if (val !== (order.notes || '')) handleOrderChange(order.id, 'notes', val);
-                              }}
-                              className="border border-slate-250 rounded px-2 py-1 text-sm font-semibold text-slate-750 w-28 outline-none focus:ring-1 focus:ring-indigo-500 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                              className="w-24 text-right text-slate-700"
                             />
                           </td>
                           <td className="px-3 py-2 text-indigo-750 font-extrabold whitespace-normal break-words max-w-[140px] text-[14px]">{order.company || '—'}</td>
@@ -2479,22 +2559,19 @@ function App() {
                   try {
                     const zeroCollectedStatuses = ['غير متاح', 'عدم الرد', 'تهرب', 'لاغي', 'تأجيل', 'اوت زون', 'نزول', 'تدوير', 'مجاش', 'تالف'];
                     const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
-                    for (const id of selectedOrderIds) {
-                      const o = orders.find(x => x.id === id);
-                      if (o && !o.settled) {
-                        let updated = { ...o, status: val };
-                        if (zeroCollectedStatuses.includes(val)) {
-                          updated.collected = 0;
-                          updated.shippingFee = 0;
-                          if (val === 'نزول') updated.date = tomorrow();
-                        } else if (activeCommissionStatuses.includes(val)) {
-                          updated.collected = o.total;
-                          const merchant = merchants.find(m => m.name === o.company);
-                          updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 0);
-                        }
-                        await setDoc(doc(db, 'orders', id), updated);
+                    await performBatchUpdate(selectedOrderIds, (o) => {
+                      let updated = { ...o, status: val };
+                      if (zeroCollectedStatuses.includes(val)) {
+                        updated.collected = 0;
+                        updated.shippingFee = 0;
+                        if (val === 'نزول') updated.date = tomorrow();
+                      } else if (activeCommissionStatuses.includes(val)) {
+                        updated.collected = o.total;
+                        const merchant = merchants.find(m => m.name === o.company);
+                        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 0);
                       }
-                    }
+                      return updated;
+                    });
                     setSelectedOrderIds([]);
                     e.target.value = '';
                   } catch(err) {
@@ -2518,12 +2595,7 @@ function App() {
                 if (!val) return;
                 if (window.confirm(`هل أنت متأكد من إسناد ${selectedOrderIds.length} طلب للمندوب "${val}"؟`)) {
                   try {
-                    for (const id of selectedOrderIds) {
-                      const o = orders.find(x => x.id === id);
-                      if (o && !o.settled) {
-                        await setDoc(doc(db, 'orders', id), { ...o, agent: val });
-                      }
-                    }
+                    await performBatchUpdate(selectedOrderIds, (o) => ({ ...o, agent: val }));
                     setSelectedOrderIds([]);
                     e.target.value = '';
                   } catch(err) {
@@ -2546,12 +2618,7 @@ function App() {
               const comm = Number(commStr);
               if (isNaN(comm)) return alert('يرجى إدخال رقم صحيح.');
               try {
-                for (const id of selectedOrderIds) {
-                  const o = orders.find(x => x.id === id);
-                  if (o && !o.settled) {
-                    await setDoc(doc(db, 'orders', id), { ...o, commission: comm });
-                  }
-                }
+                await performBatchUpdate(selectedOrderIds, (o) => ({ ...o, commission: comm }));
                 setSelectedOrderIds([]);
               } catch(err) {
                 alert('خطأ أثناء التعديل الجماعي: ' + err.message);
@@ -2582,12 +2649,25 @@ function App() {
                   if (window.confirm(`هل أنت متأكد من مسح ${selectedOrderIds.length} طلب محدد نهائياً؟`)) {
                     try {
                       let deletedCount = 0;
-                      for (const id of selectedOrderIds) {
-                        const o = orders.find(x => x.id === id);
-                        if (o && !o.settled) {
-                          await deleteDoc(doc(db, 'orders', id));
-                          deletedCount++;
+                      setIsImporting(true);
+                      isImportingRef.current = true;
+                      try {
+                        const chunks = [];
+                        for (let i = 0; i < selectedOrderIds.length; i += 500) chunks.push(selectedOrderIds.slice(i, i + 500));
+                        for (const chunk of chunks) {
+                          const batch = writeBatch(db);
+                          chunk.forEach(id => {
+                            const o = orders.find(x => x.id === id);
+                            if (o && !o.settled) {
+                              batch.delete(doc(db, 'orders', id));
+                              deletedCount++;
+                            }
+                          });
+                          await batch.commit();
                         }
+                      } finally {
+                        setIsImporting(false);
+                        isImportingRef.current = false;
                       }
                       setSelectedOrderIds([]);
                       alert(`تم حذف ${deletedCount} طلب بنجاح.`);
