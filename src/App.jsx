@@ -185,14 +185,36 @@ function App() {
 
   const performBatchUpdate = async (ids, updateFn) => {
     if (ids.length === 0) return;
+    
     setIsImporting(true);
     isImportingRef.current = true;
+    
+    // 1. Optimistic UI Update - الفوري للواجهة
+    setOrders(prev => {
+      const map = new Map(prev.map(o => [o.id, o]));
+      ids.forEach(id => {
+        const o = map.get(id);
+        if (o && !o.settled) {
+          const updated = updateFn(o);
+          if (updated) map.set(id, updated);
+        }
+      });
+      return Array.from(map.values());
+    });
+
+    // 2. فك التجميد بسرعة لتبقى الواجهة نشطة
+    setTimeout(() => {
+      setIsImporting(false);
+      isImportingRef.current = false;
+    }, 500);
+
+    // 3. رفع الباتشات للخلفية بالتوازي بدلاً من التوالي
     try {
       const chunks = [];
       for (let i = 0; i < ids.length; i += 500) {
         chunks.push(ids.slice(i, i + 500));
       }
-      for (const chunk of chunks) {
+      Promise.all(chunks.map(chunk => {
         const batch = writeBatch(db);
         chunk.forEach(id => {
           const o = orders.find(x => x.id === id);
@@ -201,11 +223,10 @@ function App() {
             if (updated) batch.update(doc(db, 'orders', id), updated);
           }
         });
-        await batch.commit();
-      }
-    } finally {
-      setIsImporting(false);
-      isImportingRef.current = false;
+        return batch.commit();
+      })).catch(err => console.error("Batch error:", err));
+    } catch (err) {
+      console.error(err);
     }
   };
   const [employees, setEmployees] = useState([]);
@@ -2648,29 +2669,32 @@ function App() {
                 onClick={async () => {
                   if (window.confirm(`هل أنت متأكد من مسح ${selectedOrderIds.length} طلب محدد نهائياً؟`)) {
                     try {
-                      let deletedCount = 0;
                       setIsImporting(true);
                       isImportingRef.current = true;
-                      try {
-                        const chunks = [];
-                        for (let i = 0; i < selectedOrderIds.length; i += 500) chunks.push(selectedOrderIds.slice(i, i + 500));
-                        for (const chunk of chunks) {
-                          const batch = writeBatch(db);
-                          chunk.forEach(id => {
-                            const o = orders.find(x => x.id === id);
-                            if (o && !o.settled) {
-                              batch.delete(doc(db, 'orders', id));
-                              deletedCount++;
-                            }
-                          });
-                          await batch.commit();
-                        }
-                      } finally {
+                      
+                      // 1. Optimistic Update
+                      setOrders(prev => prev.filter(o => !selectedOrderIds.includes(o.id)));
+                      
+                      setTimeout(() => {
                         setIsImporting(false);
                         isImportingRef.current = false;
+                      }, 500);
+
+                      // 2. Parallel Background Upload
+                      const chunks = [];
+                      for (let i = 0; i < selectedOrderIds.length; i += 500) {
+                        chunks.push(selectedOrderIds.slice(i, i + 500));
                       }
+                      
+                      Promise.all(chunks.map(chunk => {
+                        const batch = writeBatch(db);
+                        chunk.forEach(id => {
+                          batch.delete(doc(db, 'orders', id));
+                        });
+                        return batch.commit();
+                      })).catch(err => console.error("Delete batch error:", err));
+
                       setSelectedOrderIds([]);
-                      alert(`تم حذف ${deletedCount} طلب بنجاح.`);
                     } catch(err) {
                       alert('خطأ أثناء الحذف: ' + err.message);
                     }
