@@ -1010,14 +1010,14 @@ function App() {
         };
 
         const importedOrders = data.map(row => {
-          const company = findValue(row, ['اسم الشحنة', 'اسم الشحنه', 'الشركات', 'الشركة', 'الشركه', 'company', 'merchant'])?.toString().trim() || '';
-          const sender = findValue(row, ['الراسل', 'اسم الراسل', 'التاجر', 'التجار', 'sender'])?.toString().trim() || '';
-          const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id'])?.toString().trim() || '';
+          const company = findValue(row, ['اسم الشحنة', 'اسم الشحنه', 'الشركات', 'الشركة', 'الشركه', 'company', 'merchant', 'اسم الشركة', 'شركة', 'شركه'])?.toString().trim() || '';
+          const sender = findValue(row, ['الراسل', 'اسم الراسل', 'التاجر', 'التجار', 'sender', 'المرسل', 'اسم المرسل', 'راسل', 'مرسل', 'المورد', 'اسم التاجر', 'صاحب الشحنة', 'اسم الصفحة', 'البيدج', 'اسم الاكونت'])?.toString().trim() || '';
+          const code = findValue(row, ['ك', 'الكود', 'رقم الشحنة', 'رقم الشحنه', 'رقم الأوردر', 'code', 'id', 'بوليصة', 'البوليصة', 'رقم البوليصة'])?.toString().trim() || '';
           const customerName = findValue(row, ['الاسم', 'اسم العميل', 'اسم المستلم', 'المستلم', 'customer', 'name'])?.toString().trim() || '';
-          const center = findValue(row, ['العنوان', 'المنطقه', 'المنطقة', 'المركز', 'address', 'center', 'region'])?.toString().trim() || '';
-          const phone = findValue(row, ['الرقم', 'الهاتف', 'التليفون', 'رقم الهاتف', 'phone', 'mobile'])?.toString().trim() || '';
-          const count = Number(findValue(row, ['العدد', 'count'])) || 1;
-          const total = Number(findValue(row, ['الاجمالى', 'الاجمالي', 'السعر', 'الإجمالي', 'total', 'price'])) || 0;
+          const center = findValue(row, ['العنوان', 'المنطقه', 'المنطقة', 'المركز', 'address', 'center', 'region', 'المحافظة', 'المحافظه', 'المدينة'])?.toString().trim() || '';
+          const phone = findValue(row, ['الرقم', 'الهاتف', 'التليفون', 'رقم الهاتف', 'phone', 'mobile', 'موبايل', 'تليفون', 'رقم الموبايل'])?.toString().trim() || '';
+          const count = Number(findValue(row, ['العدد', 'count', 'القطع', 'عدد القطع'])) || 1;
+          const total = Number(findValue(row, ['الاجمالى', 'الاجمالي', 'السعر', 'الإجمالي', 'total', 'price', 'المبلغ', 'مبلغ الشحنة']) || 0);
           const agent = findValue(row, ['المناديب', 'المندوب', 'اسم المندوب', 'agent'])?.toString().trim() || '';
           const status = findValue(row, ['الموقف', 'الحالة', 'الحاله', 'status'])?.toString().trim() || '';
           const collected = Number(findValue(row, ['المحصل', 'collected'])) || 0;
