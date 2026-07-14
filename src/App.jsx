@@ -1616,7 +1616,7 @@ function App() {
                           <span>الموقف</span>
                           <select value={tableFilterStatus} onChange={e => setTableFilterStatus(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
                             <option value="الكل">الكل</option>
-                            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                            {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                           </select>
                         </div>
                       </th>
