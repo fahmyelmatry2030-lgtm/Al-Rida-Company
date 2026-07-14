@@ -111,6 +111,7 @@ const EditableCell = ({ value, onChange, type = "text", placeholder = "", classN
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCompany, setSelectedCompany] = useState('الكل');
+  const [selectedAgent, setSelectedAgent] = useState('الكل');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
@@ -730,6 +731,10 @@ function App() {
       result = result.filter(o => !o.settled);
     }
 
+    if (selectedAgent !== 'الكل') {
+      result = result.filter(o => o.agent === selectedAgent);
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(o => 
@@ -746,7 +751,7 @@ function App() {
       const codeB = String(b.code || '');
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [orders, activeOrders, archivedOrders, activeTab, selectedCompany, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab, agentFilterTab]);
+  }, [orders, activeOrders, archivedOrders, activeTab, selectedCompany, selectedAgent, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab, agentFilterTab]);
 
   const handleTableKeyDown = (e) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
@@ -1351,7 +1356,16 @@ function App() {
                   className="pl-4 pr-9 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-48 text-sm shadow-sm" />
               </div>
             )}
-
+            
+            {(activeTab === 'data-entry' || activeTab === 'archive' || activeTab === 'company-summary') && !isAgent && (
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="bg-transparent outline-none text-sm font-medium text-slate-700">
+                  <option value="الكل">كل المناديب</option>
+                  {agents.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                </select>
+              </div>
+            )}
 
             {activeTab === 'data-entry' && (
               <div className="flex gap-2">
