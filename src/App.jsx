@@ -152,7 +152,9 @@ function App() {
   const [isQuickDispatchOpen, setIsQuickDispatchOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [agentFilterTab, setAgentFilterTab] = useState('pending'); // 'pending' = بانتظار الاستلام, 'received' = عهدة قيد التوصيل
-
+  const [tableFilterSender, setTableFilterSender] = useState('الكل');
+  const [tableFilterAgent, setTableFilterAgent] = useState('الكل');
+  const [tableFilterStatus, setTableFilterStatus] = useState('الكل');
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
     try {
       await setDoc(doc(db, collectionName, savedItem.id), savedItem);
@@ -742,6 +744,16 @@ function App() {
 
     if (selectedAgent !== 'الكل') {
       result = result.filter(o => o.agent === selectedAgent);
+    }
+
+    if (tableFilterSender !== 'الكل') {
+      result = result.filter(o => o.sender === tableFilterSender || o.company === tableFilterSender);
+    }
+    if (tableFilterAgent !== 'الكل') {
+      result = result.filter(o => o.agent === tableFilterAgent);
+    }
+    if (tableFilterStatus !== 'الكل') {
+      result = result.filter(o => o.status === tableFilterStatus);
     }
 
     if (searchQuery.trim()) {
@@ -1575,15 +1587,38 @@ function App() {
                         </th>
                       )}
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[80px]">المراجعه</th>
-                      <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الراسل</th>
+                      <th className="px-1.5 py-1 min-w-[100px] max-w-[120px] text-right align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>الراسل</span>
+                          <select value={tableFilterSender} onChange={e => setTableFilterSender(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            {companiesDropdown.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </th>
                       <th className="px-1 py-2 text-center min-w-[50px] max-w-[60px]">ك</th>
                       <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الاسم</th>
                       <th className="px-1.5 py-2 min-w-[160px] max-w-[200px] text-right">العنوان</th>
                       <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الرقم</th>
                       <th className="px-1 py-2 text-center min-w-[45px] max-w-[55px]">العدد</th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">الاجمالى</th>
-                      <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
-                      <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
+                      <th className="px-1.5 py-1 min-w-[110px] max-w-[130px] text-right align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>المناديب</span>
+                          <select value={tableFilterAgent} onChange={e => setTableFilterAgent(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            <option value="الكل">الكل</option>
+                            {[...new Set([...agents.map(a => a.name), ...orders.map(o => o.agent)].filter(Boolean))].map(a => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </div>
+                      </th>
+                      <th className="px-1 py-1 text-center min-w-[95px] max-w-[110px] align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>الموقف</span>
+                          <select value={tableFilterStatus} onChange={e => setTableFilterStatus(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            <option value="الكل">الكل</option>
+                            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
                       <th className="px-1 py-2 text-center min-w-[110px] max-w-[130px]">العمولة</th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
