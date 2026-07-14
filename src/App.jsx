@@ -20,8 +20,8 @@ const STATUS_OPTIONS = [
   { label: 'تم التسليم', value: 'تم التسليم', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   { label: 'جزئي', value: 'جزئي', color: 'bg-lime-100 text-lime-700 border-lime-300' },
   { label: 'رفض وشحن', value: 'رفض وشحن', color: 'bg-rose-100 text-rose-800 border-rose-300' },
-  { label: 'رفض ورفض', value: 'رفض ورفض', color: 'bg-orange-100 text-orange-850 border-orange-300' },
-  { label: 'تبديل', value: 'تبديل', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  { label: 'رفض بدون شحن', value: 'رفض بدون شحن', color: 'bg-orange-100 text-orange-850 border-orange-300' },
+  { label: 'الاستبدال', value: 'الاستبدال', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
   { label: 'استرجاع', value: 'استرجاع', color: 'bg-violet-100 text-violet-800 border-violet-300' },
   { label: 'غير متاح', value: 'غير متاح', color: 'bg-slate-200 text-slate-700 border-slate-400' },
   { label: 'عدم الرد', value: 'عدم الرد', color: 'bg-gray-200 text-gray-700 border-gray-400' },
@@ -405,7 +405,7 @@ function App() {
     const fee = Number(shippingFee);
     const safeCollected = isNaN(coll) ? 0 : coll;
     const safeFee = isNaN(fee) ? 0 : fee;
-    const isFeeApplicable = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'].includes(status);
+    const isFeeApplicable = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض بدون شحن', 'الاستبدال', 'استرجاع', 'رفض ورفض', 'تبديل'].includes(status);
     const feeToDeduct = isFeeApplicable ? safeFee : 0;
     return safeCollected - feeToDeduct;
   };
@@ -2644,7 +2644,7 @@ function App() {
                 if (!val) return;
                 if (window.confirm(`هل أنت متأكد من تغيير موقف ${selectedOrderIds.length} طلب إلى "${val}"؟`)) {
                   try {
-                    const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
+                    const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض بدون شحن', 'الاستبدال', 'استرجاع', 'رفض ورفض', 'تبديل'];
                     await performBatchUpdate(selectedOrderIds, (o) => {
                       let updated = { ...o, status: val };
                       if (!activeCommissionStatuses.includes(val)) {
@@ -2656,7 +2656,7 @@ function App() {
                         updated.collected = o.total;
                         updated.commission = o.commission || 20;
                         const merchant = merchants.find(m => m.name === o.company);
-                        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 0);
+                        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 20);
                       }
                       return updated;
                     });

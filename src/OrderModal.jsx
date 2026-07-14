@@ -2,17 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 
 const STATUS_OPTIONS = [
-  { label: 'تم التسليم', value: 'تم التسليم', color: 'bg-green-100 text-green-800 border-green-200' },
-  { label: 'جزئي', value: 'جزئي', color: 'bg-green-50 text-green-700 border-green-200' },
-  { label: 'لاغي', value: 'لاغي', color: 'bg-red-100 text-red-800 border-red-200' },
-  { label: 'مؤجل', value: 'مؤجل', color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  { label: 'نزول', value: 'نزول', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  { label: 'بدون شحن', value: 'بدون شحن', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { label: 'رفض شحن', value: 'رفض شحن', color: 'bg-rose-100 text-rose-800 border-rose-200' },
-  { label: 'غير متاح', value: 'غير متاح', color: 'bg-slate-200 text-slate-800 border-slate-300' },
-  { label: 'عدم رد', value: 'عدم رد', color: 'bg-gray-100 text-gray-700 border-gray-300' },
-  { label: 'تهرب', value: 'تهرب', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  { label: 'اوت زون', value: 'اوت زون', color: 'bg-teal-100 text-teal-800 border-teal-200' },
+  { label: 'تم التسليم', value: 'تم التسليم', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  { label: 'جزئي', value: 'جزئي', color: 'bg-lime-100 text-lime-700 border-lime-300' },
+  { label: 'رفض وشحن', value: 'رفض وشحن', color: 'bg-rose-100 text-rose-800 border-rose-300' },
+  { label: 'رفض بدون شحن', value: 'رفض بدون شحن', color: 'bg-orange-100 text-orange-850 border-orange-300' },
+  { label: 'الاستبدال', value: 'الاستبدال', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  { label: 'استرجاع', value: 'استرجاع', color: 'bg-violet-100 text-violet-800 border-violet-300' },
+  { label: 'غير متاح', value: 'غير متاح', color: 'bg-slate-200 text-slate-700 border-slate-400' },
+  { label: 'عدم الرد', value: 'عدم الرد', color: 'bg-gray-200 text-gray-700 border-gray-400' },
+  { label: 'تهرب', value: 'تهرب', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+  { label: 'لاغي', value: 'لاغي', color: 'bg-red-100 text-red-800 border-red-300' },
+  { label: 'تأجيل', value: 'تأجيل', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+  { label: 'اوت زون', value: 'اوت زون', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+  { label: 'نزول', value: 'نزول', color: 'bg-sky-100 text-sky-850 border-sky-300' },
+  { label: 'تدوير', value: 'تدوير', color: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300' },
+  { label: 'مجاش', value: 'مجاش', color: 'bg-zinc-200 text-zinc-700 border-zinc-400' },
+  { label: 'تالف', value: 'تالف', color: 'bg-stone-200 text-stone-700 border-stone-400' },
 ];
 
 export default function OrderModal({ isOpen, onClose, onSave, order, merchants, agents, isEditMode }) {
@@ -28,8 +33,17 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
 
   const handleChange = (field, value) => {
     let updated = { ...formData, [field]: value };
+    const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض بدون شحن', 'الاستبدال', 'استرجاع', 'رفض ورفض', 'تبديل'];
+
+    if (['collected', 'commission', 'shippingFee'].includes(field)) {
+      if (updated.status && !activeCommissionStatuses.includes(updated.status)) {
+        updated.collected = 0;
+        updated.commission = 0;
+        updated.shippingFee = 0;
+      }
+    }
+
     if (field === 'status') {
-      const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
       if (!activeCommissionStatuses.includes(value)) {
         updated.collected = 0;
         updated.commission = 0;
@@ -38,7 +52,7 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
         updated.collected = updated.total;
         updated.commission = updated.commission || 20;
         const merchant = merchants.find(m => m.name === updated.company);
-        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (updated.shippingFee || 0);
+        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (updated.shippingFee || 20);
       }
     } else if (field === 'company') {
       const merchant = merchants.find(m => m.name === value);
