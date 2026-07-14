@@ -747,14 +747,21 @@ function App() {
       result = result.filter(o => o.agent === selectedAgent);
     }
 
-    if (tableFilterSender !== 'الكل') {
-      result = result.filter(o => o.sender === tableFilterSender || o.company === tableFilterSender);
-    }
-    if (tableFilterAgent !== 'الكل') {
-      result = result.filter(o => o.agent === tableFilterAgent);
-    }
-    if (tableFilterStatus !== 'الكل') {
-      result = result.filter(o => o.status === tableFilterStatus);
+    if (activeTab !== 'company-summary') {
+      if (tableFilterSender !== 'الكل') {
+        const cleanSel = (tableFilterSender || '').replace(/[-_\\s]+/g, '').toLowerCase();
+        result = result.filter(o => {
+          const c = (o.company || '').replace(/[-_\\s]+/g, '').toLowerCase();
+          const s = (o.sender || '').replace(/[-_\\s]+/g, '').toLowerCase();
+          return c === cleanSel || s === cleanSel;
+        });
+      }
+      if (tableFilterAgent !== 'الكل') {
+        result = result.filter(o => o.agent === tableFilterAgent);
+      }
+      if (tableFilterStatus !== 'الكل') {
+        result = result.filter(o => o.status === tableFilterStatus);
+      }
     }
 
     if (searchQuery.trim()) {
