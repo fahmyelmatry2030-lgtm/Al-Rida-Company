@@ -153,6 +153,7 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [agentFilterTab, setAgentFilterTab] = useState('pending'); // 'pending' = بانتظار الاستلام, 'received' = عهدة قيد التوصيل
   const [tableFilterSender, setTableFilterSender] = useState('الكل');
+  const [tableFilterCompany, setTableFilterCompany] = useState('الكل');
   const [tableFilterAgent, setTableFilterAgent] = useState('الكل');
   const [tableFilterStatus, setTableFilterStatus] = useState('الكل');
   const handleSaveEntity = async (collectionName, modalSetter, savedItem) => {
@@ -701,6 +702,23 @@ function App() {
     ...orders.map(o => o.sender)
   ].filter(Boolean))];
 
+  const tableFilterOptions = useMemo(() => {
+    let base = [];
+    if (activeTab === 'data-entry') {
+      base = activeOrders.filter(o => o.date === activeDateTab);
+    } else if (activeTab === 'archive') {
+      base = archivedOrders.filter(o => o.date === archiveDateTab);
+    } else {
+      base = orders;
+    }
+    return {
+      senders: ['الكل', ...new Set(base.map(o => o.sender).filter(Boolean))],
+      companies: ['الكل', ...new Set(base.map(o => o.company).filter(Boolean))],
+      agents: ['الكل', ...new Set(base.map(o => o.agent).filter(Boolean))],
+      statuses: ['الكل', ...new Set(base.map(o => o.status).filter(Boolean))]
+    };
+  }, [orders, activeOrders, archivedOrders, activeTab, activeDateTab, archiveDateTab]);
+
   const filteredOrders = useMemo(() => {
     // ⚡ نبدأ من المجموعة الصغيرة المناسبة للـ tab المفعّل بدلاً من orders كلها
     let result;
@@ -751,9 +769,15 @@ function App() {
       if (tableFilterSender !== 'الكل') {
         const cleanSel = (tableFilterSender || '').replace(/[-_\\s]+/g, '').toLowerCase();
         result = result.filter(o => {
-          const c = (o.company || '').replace(/[-_\\s]+/g, '').toLowerCase();
           const s = (o.sender || '').replace(/[-_\\s]+/g, '').toLowerCase();
-          return c === cleanSel || s === cleanSel;
+          return s === cleanSel;
+        });
+      }
+      if (tableFilterCompany !== 'الكل') {
+        const cleanSel = (tableFilterCompany || '').replace(/[-_\\s]+/g, '').toLowerCase();
+        result = result.filter(o => {
+          const c = (o.company || '').replace(/[-_\\s]+/g, '').toLowerCase();
+          return c === cleanSel;
         });
       }
       if (tableFilterAgent !== 'الكل') {
@@ -1599,7 +1623,7 @@ function App() {
                         <div className="flex flex-col gap-1">
                           <span>الراسل</span>
                           <select value={tableFilterSender} onChange={e => setTableFilterSender(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
-                            {companiesDropdown.map(c => <option key={c} value={c}>{c}</option>)}
+                            {tableFilterOptions.senders.map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
                         </div>
                       </th>
@@ -1613,8 +1637,7 @@ function App() {
                         <div className="flex flex-col gap-1">
                           <span>المناديب</span>
                           <select value={tableFilterAgent} onChange={e => setTableFilterAgent(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
-                            <option value="الكل">الكل</option>
-                            {[...new Set([...agents.map(a => a.name), ...orders.map(o => o.agent)].filter(Boolean))].map(a => <option key={a} value={a}>{a}</option>)}
+                            {tableFilterOptions.agents.map(a => <option key={a} value={a}>{a}</option>)}
                           </select>
                         </div>
                       </th>
@@ -1622,8 +1645,7 @@ function App() {
                         <div className="flex flex-col gap-1">
                           <span>الموقف</span>
                           <select value={tableFilterStatus} onChange={e => setTableFilterStatus(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
-                            <option value="الكل">الكل</option>
-                            {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            {tableFilterOptions.statuses.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
                       </th>
@@ -1632,7 +1654,14 @@ function App() {
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
                       <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
                       <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
-                      <th className="px-1.5 py-2 min-w-[90px] max-w-[110px] text-right">الشركات</th>
+                      <th className="px-1.5 py-1 min-w-[110px] max-w-[130px] text-right align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>الشركات</span>
+                          <select value={tableFilterCompany} onChange={e => setTableFilterCompany(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            {tableFilterOptions.companies.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </th>
                       {activeTab !== 'archive' && <th className="px-1 py-2 text-center w-14 print:hidden">إجراءات</th>}
                     </tr>
                   </thead>
