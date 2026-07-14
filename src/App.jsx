@@ -725,7 +725,12 @@ function App() {
     }
 
     if (activeTab === 'company-summary' && selectedCompany !== 'الكل') {
-      result = result.filter(o => o.company === selectedCompany || o.sender === selectedCompany);
+      const cleanSel = (selectedCompany || '').replace(/[-_\\s]+/g, '').toLowerCase();
+      result = result.filter(o => {
+        const c = (o.company || '').replace(/[-_\\s]+/g, '').toLowerCase();
+        const s = (o.sender || '').replace(/[-_\\s]+/g, '').toLowerCase();
+        return c === cleanSel || s === cleanSel;
+      });
     }
     if (activeTab === 'company-summary') {
       if (filterDateFrom) result = result.filter(o => o.date && o.date >= filterDateFrom);
