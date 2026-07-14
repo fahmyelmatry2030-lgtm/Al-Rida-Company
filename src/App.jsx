@@ -692,7 +692,11 @@ function App() {
   };
 
   // Search & Filter
-  const companiesDropdown = ['الكل', ...new Set(merchants.map(m => m.name).filter(Boolean))];
+  const companiesDropdown = ['الكل', ...new Set([
+    ...merchants.map(m => m.name),
+    ...orders.map(o => o.company),
+    ...orders.map(o => o.sender)
+  ].filter(Boolean))];
 
   const filteredOrders = useMemo(() => {
     // ⚡ نبدأ من المجموعة الصغيرة المناسبة للـ tab المفعّل بدلاً من orders كلها
