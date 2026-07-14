@@ -430,18 +430,19 @@ function App() {
     
     let updatedOrder = { ...order, [field]: value };
     if (field === 'status') {
-      const zeroCollectedStatuses = ['غير متاح', 'عدم الرد', 'تهرب', 'لاغي', 'تأجيل', 'اوت زون', 'نزول', 'تدوير', 'مجاش', 'تالف'];
       const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
-      if (zeroCollectedStatuses.includes(value)) {
+      if (!activeCommissionStatuses.includes(value)) {
         updatedOrder.collected = 0;
+        updatedOrder.commission = 0;
         updatedOrder.shippingFee = 0;
         if (value === 'نزول') {
           updatedOrder.date = tomorrow();
         }
-      } else if (activeCommissionStatuses.includes(value)) {
+      } else {
         updatedOrder.collected = Number(updatedOrder.total) || 0;
+        updatedOrder.commission = order.commission || 20;
         const merchant = merchants.find(m => m.name === updatedOrder.company);
-        updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
+        updatedOrder.shippingFee = merchant ? Number(merchant.rate) || 0 : (order.shippingFee || 0);
       }
     }
     
@@ -2636,16 +2637,17 @@ function App() {
                 if (!val) return;
                 if (window.confirm(`هل أنت متأكد من تغيير موقف ${selectedOrderIds.length} طلب إلى "${val}"؟`)) {
                   try {
-                    const zeroCollectedStatuses = ['غير متاح', 'عدم الرد', 'تهرب', 'لاغي', 'تأجيل', 'اوت زون', 'نزول', 'تدوير', 'مجاش', 'تالف'];
                     const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
                     await performBatchUpdate(selectedOrderIds, (o) => {
                       let updated = { ...o, status: val };
-                      if (zeroCollectedStatuses.includes(val)) {
+                      if (!activeCommissionStatuses.includes(val)) {
                         updated.collected = 0;
+                        updated.commission = 0;
                         updated.shippingFee = 0;
                         if (val === 'نزول') updated.date = tomorrow();
-                      } else if (activeCommissionStatuses.includes(val)) {
+                      } else {
                         updated.collected = o.total;
+                        updated.commission = o.commission || 20;
                         const merchant = merchants.find(m => m.name === o.company);
                         updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (o.shippingFee || 0);
                       }

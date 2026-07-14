@@ -29,14 +29,16 @@ export default function OrderModal({ isOpen, onClose, onSave, order, merchants, 
   const handleChange = (field, value) => {
     let updated = { ...formData, [field]: value };
     if (field === 'status') {
-      const zeroCollectedStatuses = ['لاغي', 'غير متاح', 'عدم رد', 'بدون شحن', 'تهرب', 'مؤجل', 'رفض شحن'];
-      if (zeroCollectedStatuses.includes(value)) {
+      const activeCommissionStatuses = ['تم التسليم', 'جزئي', 'رفض وشحن', 'رفض ورفض', 'تبديل', 'استرجاع'];
+      if (!activeCommissionStatuses.includes(value)) {
         updated.collected = 0;
+        updated.commission = 0;
         updated.shippingFee = 0;
-      } else if (['تم التسليم', 'اوت زون', 'نزول'].includes(value)) {
+      } else {
         updated.collected = updated.total;
+        updated.commission = updated.commission || 20;
         const merchant = merchants.find(m => m.name === updated.company);
-        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : 0;
+        updated.shippingFee = merchant ? Number(merchant.rate) || 0 : (updated.shippingFee || 0);
       }
     } else if (field === 'company') {
       const merchant = merchants.find(m => m.name === value);
