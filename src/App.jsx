@@ -765,27 +765,25 @@ function App() {
       result = result.filter(o => o.agent === selectedAgent);
     }
 
-    if (activeTab !== 'company-summary') {
-      if (tableFilterSender !== 'الكل') {
-        const cleanSel = (tableFilterSender || '').replace(/[-_\\s]+/g, '').toLowerCase();
-        result = result.filter(o => {
-          const s = (o.sender || '').replace(/[-_\\s]+/g, '').toLowerCase();
-          return s === cleanSel;
-        });
-      }
-      if (tableFilterCompany !== 'الكل') {
-        const cleanSel = (tableFilterCompany || '').replace(/[-_\\s]+/g, '').toLowerCase();
-        result = result.filter(o => {
-          const c = (o.company || '').replace(/[-_\\s]+/g, '').toLowerCase();
-          return c === cleanSel;
-        });
-      }
-      if (tableFilterAgent !== 'الكل') {
-        result = result.filter(o => o.agent === tableFilterAgent);
-      }
-      if (tableFilterStatus !== 'الكل') {
-        result = result.filter(o => o.status === tableFilterStatus);
-      }
+    if (tableFilterSender !== 'الكل') {
+      const cleanSel = (tableFilterSender || '').replace(/[-_\\s]+/g, '').toLowerCase();
+      result = result.filter(o => {
+        const s = (o.sender || '').replace(/[-_\\s]+/g, '').toLowerCase();
+        return s === cleanSel;
+      });
+    }
+    if (tableFilterCompany !== 'الكل') {
+      const cleanSel = (tableFilterCompany || '').replace(/[-_\\s]+/g, '').toLowerCase();
+      result = result.filter(o => {
+        const c = (o.company || '').replace(/[-_\\s]+/g, '').toLowerCase();
+        return c === cleanSel;
+      });
+    }
+    if (tableFilterAgent !== 'الكل') {
+      result = result.filter(o => o.agent === tableFilterAgent);
+    }
+    if (tableFilterStatus !== 'الكل') {
+      result = result.filter(o => o.status === tableFilterStatus);
     }
 
     if (searchQuery.trim()) {
@@ -1985,21 +1983,49 @@ function App() {
                         <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="rounded border-slate-300 w-3 h-3 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                       </th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[80px]">المراجعه</th>
-                      <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الراسل</th>
+                      <th className="px-1.5 py-1 min-w-[100px] max-w-[120px] text-right align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>الراسل</span>
+                          <select value={tableFilterSender} onChange={e => setTableFilterSender(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            {tableFilterOptions.senders.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </th>
                       <th className="px-1 py-2 text-center min-w-[50px] max-w-[60px]">ك</th>
                       <th className="px-1.5 py-2 min-w-[100px] max-w-[120px] text-right">الاسم</th>
                       <th className="px-1.5 py-2 min-w-[160px] max-w-[200px] text-right">العنوان</th>
                       <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الرقم</th>
                       <th className="px-1 py-2 text-center min-w-[45px] max-w-[55px]">العدد</th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">الاجمالى</th>
-                      <th className="px-1.5 py-2 min-w-[110px] max-w-[130px] text-right">المناديب</th>
-                      <th className="px-1 py-2 text-center min-w-[95px] max-w-[110px]">الموقف</th>
+                      <th className="px-1.5 py-1 min-w-[110px] max-w-[130px] text-right align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>المناديب</span>
+                          <select value={tableFilterAgent} onChange={e => setTableFilterAgent(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            {tableFilterOptions.agents.map(a => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </div>
+                      </th>
+                      <th className="px-1 py-1 text-center min-w-[95px] max-w-[110px] align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>الموقف</span>
+                          <select value={tableFilterStatus} onChange={e => setTableFilterStatus(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            {tableFilterOptions.statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </th>
                       <th className="px-1 py-2 text-center min-w-[75px] max-w-[90px]">المحصل</th>
                       <th className="px-1 py-2 text-center min-w-[60px] max-w-[75px]">العمولة</th>
                       <th className="px-1 py-2 text-center min-w-[70px] max-w-[85px] font-bold text-indigo-600">الصافى</th>
                       <th className="px-1 py-2 text-center min-w-[80px] max-w-[95px]">المرتجع</th>
                       <th className="px-1.5 py-2 min-w-[120px] max-w-[150px] text-right">ملاحظات</th>
-                      <th className="px-1.5 py-2 min-w-[90px] max-w-[110px] text-right">الشركات</th>
+                      <th className="px-1.5 py-1 min-w-[110px] max-w-[130px] text-right align-top">
+                        <div className="flex flex-col gap-1">
+                          <span>الشركات</span>
+                          <select value={tableFilterCompany} onChange={e => setTableFilterCompany(e.target.value)} className="w-full text-[10px] py-0.5 px-1 rounded border border-slate-300 text-slate-700 bg-white font-normal outline-none focus:border-indigo-500 print:hidden" onClick={e => e.stopPropagation()}>
+                            {tableFilterOptions.companies.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
