@@ -1439,13 +1439,6 @@ function App() {
                   <>
                     {!isAgent && (
                       <>
-                        <button 
-                          onClick={() => handleArchiveOrders(filteredOrders)} 
-                          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
-                          title="نقل طلبات هذا اليوم فوراً إلى سجل الشحنات"
-                        >
-                          <Archive className="w-4 h-4" /> ترحيل للسجل
-                        </button>
                         {isAdmin && (
                           <button 
                             onClick={() => handleDeleteAllToday(filteredOrders)} 
