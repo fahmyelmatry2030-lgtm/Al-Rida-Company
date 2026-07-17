@@ -713,8 +713,8 @@ function App() {
     }
     return {
       senders: ['الكل', ...new Set([...merchants.map(m => m.name), ...base.map(o => o.sender)].filter(Boolean))],
-      companies: ['الكل', ...new Set([...merchants.map(m => m.name), ...base.map(o => o.company)].filter(Boolean))],
-      agents: ['الكل', ...new Set([...agents.map(a => a.name), ...base.map(o => o.agent)].filter(Boolean))],
+      companies: ['الكل', ...new Set(base.map(o => o.company).filter(Boolean))],
+      agents: ['الكل', ...new Set(base.map(o => o.agent).filter(Boolean))],
       statuses: ['الكل', ...new Set(base.map(o => o.status).filter(Boolean))]
     };
   }, [orders, activeOrders, archivedOrders, activeTab, activeDateTab, archiveDateTab, merchants, agents]);
