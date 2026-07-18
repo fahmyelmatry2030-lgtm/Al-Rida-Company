@@ -802,7 +802,12 @@ function App() {
       const codeB = String(b.code || '');
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [orders, activeOrders, archivedOrders, activeTab, selectedCompany, selectedAgent, searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, activeDateTab, archiveDateTab, agentFilterTab]);
+  }, [
+    orders, activeOrders, archivedOrders, activeTab, selectedCompany, selectedAgent, 
+    searchQuery, filterDateFrom, filterDateTo, showSettled, currentUser, 
+    activeDateTab, archiveDateTab, agentFilterTab,
+    tableFilterSender, tableFilterCompany, tableFilterAgent, tableFilterStatus
+  ]);
 
   const handleTableKeyDown = (e) => {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return;
